@@ -1,0 +1,171 @@
+.dialog {
+  width: min(760px, calc(100vw - 24px));
+  max-height: min(820px, calc(100vh - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.heading,
+.filters,
+.customRow,
+.footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.heading {
+  justify-content: space-between;
+
+  h2 {
+    margin: 0;
+    color: var(--color-text-highlight);
+    font-size: 1.1rem;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: var(--color-text-secondary);
+    font-size: 0.82rem;
+  }
+}
+
+.close {
+  border: 0;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1.6rem;
+  cursor: pointer;
+}
+
+.filters input,
+.filters select,
+.custom input {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--color-card-border);
+  border-radius: 8px;
+  background: var(--color-card);
+  color: var(--color-text);
+}
+
+.filters input {
+  flex: 1;
+}
+
+.filters select {
+  max-width: 35%;
+}
+
+.count {
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 8px;
+  min-height: 100px;
+  max-height: 48vh;
+  overflow: auto;
+  padding: 2px;
+}
+
+.iconButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 5px;
+  border: 1px solid var(--color-card-border);
+  border-radius: 10px;
+  background: var(--color-card);
+  color: var(--color-text);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible,
+  &.selected {
+    border-color: var(--color-focus-blue);
+    outline: none;
+  }
+
+  img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    border-radius: 9px;
+  }
+
+  span {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.74rem;
+  }
+}
+
+.empty {
+  grid-column: 1 / -1;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+.custom {
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.customRow input {
+  flex: 1;
+}
+
+.customRow button,
+.footer button {
+  padding: 9px 12px;
+  border: 1px solid var(--color-card-border);
+  border-radius: 8px;
+  background: var(--color-card);
+  color: var(--color-text);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-focus-blue);
+  }
+}
+
+.error {
+  margin: 0;
+  color: #e05252;
+}
+
+.footer {
+  justify-content: space-between;
+  font-size: 0.8rem;
+
+  a {
+    color: var(--color-focus-blue);
+  }
+}
+
+@media (max-width: 540px) {
+  .filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filters select {
+    max-width: none;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    max-height: 42vh;
+  }
+}

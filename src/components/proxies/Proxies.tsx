@@ -1,9 +1,11 @@
 import cx from 'clsx';
 import * as React from 'react';
 
+import { GroupIconPicker } from '~/components/proxies/GroupIconPicker';
 import { ProxiesHeader } from '~/components/proxies/ProxiesHeader';
 import { ProxyGroup } from '~/components/proxies/ProxyGroup';
 import { ProxyProvider } from '~/components/proxies/ProxyProvider';
+import { readGroupIconAssignments, saveGroupIconAssignments } from '~/modules/proxies/groupIcons';
 import {
   useCollapseAll,
   useDelayMapping,
@@ -26,6 +28,26 @@ type Props = {
 };
 
 export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
+  const [iconAssignments, setIconAssignments] = React.useState(readGroupIconAssignments);
+  const [editingGroupName, setEditingGroupName] = React.useState<string | null>(null);
+  const backendKey = apiConfig.baseURL || 'default';
+
+  React.useEffect(() => {
+    saveGroupIconAssignments(iconAssignments);
+  }, [iconAssignments]);
+
+  const setGroupIcon = React.useCallback(
+    (groupName: string, url: string | undefined) => {
+      setIconAssignments((previous) => {
+        const backendIcons = { ...(previous[backendKey] || {}) };
+        if (url) backendIcons[groupName] = url;
+        else delete backendIcons[groupName];
+        return { ...previous, [backendKey]: backendIcons };
+      });
+    },
+    [backendKey],
+  );
+
   // the panel's configured test URL only feeds the latency-color threshold here;
   // the actual URL used per request is resolved in the mutation hooks
   const httpsLatencyTest = appConfig.latencyTestUrl.startsWith('https://');
@@ -87,6 +109,8 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
               <div className={s0.group} key={name} style={{ order: originalIndex }}>
                 <ProxyGroup
                   name={name}
+                  iconOverride={iconAssignments[backendKey]?.[name]}
+                  onEditIcon={() => setEditingGroupName(name)}
                   delay={delay}
                   apiConfig={apiConfig}
                   appConfig={appConfig}
@@ -146,6 +170,15 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
         isUpdatingProviders={isUpdatingProviders}
       />
       {content}
+      <GroupIconPicker
+        isOpen={editingGroupName !== null}
+        groupName={editingGroupName || ''}
+        selectedUrl={editingGroupName ? iconAssignments[backendKey]?.[editingGroupName] : undefined}
+        onSelect={(url) => {
+          if (editingGroupName) setGroupIcon(editingGroupName, url);
+        }}
+        onClose={() => setEditingGroupName(null)}
+      />
     </div>
   );
 }

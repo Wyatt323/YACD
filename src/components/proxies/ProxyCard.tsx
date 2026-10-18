@@ -2,7 +2,7 @@ import cx from 'clsx';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ChevronDown, Zap } from '~/components/shared/FeatherIcons';
+import { ChevronDown, Edit3, Zap } from '~/components/shared/FeatherIcons';
 import { DelayMapping } from '~/store/types';
 
 import s from './ProxyCard.module.scss';
@@ -36,6 +36,8 @@ export function ProxyCard({ children }: { children: React.ReactNode }) {
 /** 卡片头部：名称 + 类型徽章 + 右侧延迟 / 测速 / 折叠箭头。整行点击折叠。 */
 export function ProxyCardHeader({
   name,
+  logoUrl,
+  onEditLogo,
   type,
   isOpen,
   toggle,
@@ -47,6 +49,8 @@ export function ProxyCardHeader({
   extraActions,
 }: {
   name: string;
+  logoUrl?: string;
+  onEditLogo?: () => void;
   type: string;
   isOpen: boolean;
   toggle: () => void;
@@ -58,6 +62,7 @@ export function ProxyCardHeader({
   extraActions?: React.ReactNode;
 }) {
   const { t } = useTranslation();
+  const [failedLogo, setFailedLogo] = useState('');
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Enter' || e.key === ' ') {
@@ -77,6 +82,31 @@ export function ProxyCardHeader({
       tabIndex={0}
       aria-expanded={isOpen}
     >
+      {onEditLogo ? (
+        <button
+          type="button"
+          className={s.logoButton}
+          onClick={(event) => {
+            event.stopPropagation();
+            onEditLogo();
+          }}
+          onKeyDown={(event) => event.stopPropagation()}
+          title={t('edit_group_icon')}
+          aria-label={t('edit_group_icon_for', { name })}
+        >
+          {logoUrl && failedLogo !== logoUrl ? (
+            <img
+              className={s.logoImage}
+              src={logoUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              onError={() => setFailedLogo(logoUrl)}
+            />
+          ) : (
+            <Edit3 size={16} aria-hidden />
+          )}
+        </button>
+      ) : null}
       <span className={s.name} title={name}>
         {name}
       </span>

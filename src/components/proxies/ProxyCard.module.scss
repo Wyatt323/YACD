@@ -33,6 +33,35 @@
   }
 }
 
+.logoButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  padding: 2px;
+  border: 1px solid var(--color-card-border);
+  border-radius: 8px;
+  background: var(--color-card);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-focus-blue);
+    color: var(--color-focus-blue);
+    outline: none;
+  }
+}
+
+.logoImage {
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
 .name {
   font-size: 0.98rem;
   font-weight: 600;

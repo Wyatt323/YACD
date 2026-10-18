@@ -1,0 +1,78 @@
+name: Sync upstream and publish custom Yacd-meta
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+
+concurrency:
+  group: upstream-sync-and-publish
+  cancel-in-progress: false
+
+jobs:
+  sync-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out custom branch
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Merge upstream
+        id: upstream
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/MetaCubeX/Yacd-meta.git
+          git fetch upstream master
+          before="$(git rev-parse HEAD)"
+          git merge --no-edit upstream/master
+          after="$(git rev-parse HEAD)"
+          if [ "$before" = "$after" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Bun
+        if: steps.upstream.outputs.changed == 'true' || github.event_name != 'schedule'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install, check, and build
+        if: steps.upstream.outputs.changed == 'true' || github.event_name != 'schedule'
+        run: |
+          bun install --frozen-lockfile
+          bun run lint
+          bun run typecheck
+          bun run build
+
+      - name: Push verified upstream merge
+        if: steps.upstream.outputs.changed == 'true'
+        run: git push origin HEAD:master
+
+      - name: Save downloadable UI bundle
+        if: steps.upstream.outputs.changed == 'true' || github.event_name != 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: yacd-meta-oasisic-ui
+          path: public/
+
+      - name: Publish UI to gh-pages branch
+        if: steps.upstream.outputs.changed == 'true' || github.event_name != 'schedule'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true

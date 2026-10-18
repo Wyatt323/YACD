@@ -69,6 +69,7 @@ export type SubscriptionInfo = {
 export type ProxyItem = {
   name: string;
   type: PrimitiveProxyType;
+  icon?: string;
   udp: boolean;
   xudp?: boolean;
   tfo: boolean;

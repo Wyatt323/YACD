@@ -45,6 +45,8 @@ function buildNowChain(proxies: ProxiesMapping, groupName: string): string | nul
 
 type Props = {
   name: string;
+  iconOverride?: string;
+  onEditIcon: () => void;
   delay: DelayMapping;
   proxies: ProxiesMapping;
   isOpen: boolean;
@@ -55,6 +57,8 @@ type Props = {
 
 export const ProxyGroup = memo(function ProxyGroup({
   name,
+  iconOverride,
+  onEditIcon,
   delay,
   proxies,
   isOpen,
@@ -140,6 +144,8 @@ export const ProxyGroup = memo(function ProxyGroup({
     <ProxyCard>
       <ProxyCardHeader
         name={name}
+        logoUrl={iconOverride || group?.icon}
+        onEditLogo={onEditIcon}
         type={type}
         isOpen={effectiveIsOpen}
         toggle={toggle}
