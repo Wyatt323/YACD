@@ -18,34 +18,48 @@ import { useStoreActions } from '~/store/StateProvider';
 import { DelayMapping, ProxiesMapping, ProxyItem } from '~/store/types';
 import { ClashAPIConfig } from '~/types';
 
-import { getLatencyColor, ProxyCard, ProxyCardHeader, ProxyCardStatusRow } from './ProxyCard';
+import {
+  getLatencyColor,
+  NowChainItem,
+  ProxyCard,
+  ProxyCardHeader,
+  ProxyCardStatusRow,
+} from './ProxyCard';
 import s0 from './ProxyCard.module.scss';
 import { ProxyList, ProxyListGroupedByProvider, ProxyListSummaryView } from './ProxyList';
 
 const { memo, useCallback, useMemo } = React;
 
-function buildNowChain(proxies: ProxiesMapping, groupName: string): string | null {
+function buildNowChain(
+  proxies: ProxiesMapping,
+  groupName: string,
+  iconOverrides: Record<string, string>,
+): NowChainItem[] {
   const group = proxies[groupName] as ProxyItem & { now?: string };
-  if (!group?.now) return null;
+  if (!group?.now) return [];
 
-  const parts: string[] = [group.now];
+  const part = (name: string): NowChainItem => ({
+    name,
+    icon: iconOverrides[name] || proxies[name]?.icon,
+  });
+  const parts: NowChainItem[] = [part(group.now)];
   let current = proxies[group.now] as ProxyItem & { now?: string };
   let depth = 0;
 
   while (current?.now && depth < 3) {
     const next = proxies[current.now];
     if (!next) break;
-    parts.push(current.now);
+    parts.push(part(current.now));
     current = next as ProxyItem & { now?: string };
     depth++;
   }
 
-  return parts.join(' › ');
+  return parts;
 }
 
 type Props = {
   name: string;
-  iconOverride?: string;
+  iconOverrides: Record<string, string>;
   onEditIcon: () => void;
   delay: DelayMapping;
   proxies: ProxiesMapping;
@@ -57,7 +71,7 @@ type Props = {
 
 export const ProxyGroup = memo(function ProxyGroup({
   name,
-  iconOverride,
+  iconOverrides,
   onEditIcon,
   delay,
   proxies,
@@ -81,7 +95,10 @@ export const ProxyGroup = memo(function ProxyGroup({
     nameMatched,
   );
 
-  const nowChain = useMemo(() => buildNowChain(proxies, name), [proxies, name]);
+  const nowChain = useMemo(
+    () => buildNowChain(proxies, name, iconOverrides),
+    [proxies, name, iconOverrides],
+  );
   const nowLatency = useMemo(
     () => (now ? getProxyLatency(proxies, delay, now) : undefined),
     [proxies, delay, now],
@@ -144,7 +161,7 @@ export const ProxyGroup = memo(function ProxyGroup({
     <ProxyCard>
       <ProxyCardHeader
         name={name}
-        logoUrl={iconOverride || group?.icon}
+        logoUrl={iconOverrides[name] || group?.icon}
         onEditLogo={onEditIcon}
         type={type}
         isOpen={effectiveIsOpen}
@@ -183,7 +200,7 @@ export const ProxyGroup = memo(function ProxyGroup({
       />
 
       <ProxyCardStatusRow
-        nowName={nowChain}
+        nowChain={nowChain}
         nowColor={nowLatencyColor}
         itemCount={all.length}
         allItems={allItems}

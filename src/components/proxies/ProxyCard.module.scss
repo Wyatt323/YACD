@@ -256,6 +256,30 @@
   border-radius: 50%;
 }
 
+.nowSeparator {
+  flex-shrink: 0;
+}
+
+.nowSegment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.nowIcon {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
+.nowLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* 圆点插槽靠右（左侧没有当前节点时改为靠左），宽度由 flex 决定而不是内容，
    测量它来决定圆点还是进度条。
    flex-basis 必须是 0：用 auto 时宽度取决于里面放的是圆点还是进度条，而放哪个又取决于宽度，

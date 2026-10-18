@@ -190,15 +190,31 @@ const AvailabilityBar = memo(function AvailabilityBar({
  * 状态行：左侧当前节点，右侧节点圆点（没有当前节点时圆点靠左）。圆点插槽的宽度由 flex 决定而不是内容，
  * 所以可以直接测量它来判断一行放不放得下——放不下就退化成可用率进度条。
  */
+export type NowChainItem = { name: string; icon?: string };
+
+function NowChainIcon({ url }: { url: string }) {
+  const [failed, setFailed] = useState(false);
+  React.useEffect(() => setFailed(false), [url]);
+  return failed ? null : (
+    <img
+      className={s.nowIcon}
+      src={url}
+      alt=""
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export function ProxyCardStatusRow({
-  nowName,
+  nowChain,
   nowColor,
   itemCount,
   allItems,
   delay,
   renderDots,
 }: {
-  nowName?: string | null;
+  nowChain?: NowChainItem[];
   nowColor?: string;
   /** 参与圆点渲染的节点数（过滤后） */
   itemCount: number;
@@ -230,13 +246,21 @@ export function ProxyCardStatusRow({
 
   return (
     <div className={s.statusRow}>
-      {nowName ? (
-        <span className={s.nowName} title={nowName}>
+      {nowChain?.length ? (
+        <span className={s.nowName} title={nowChain.map((item) => item.name).join(' › ')}>
           <i className={s.nowDot} style={{ background: nowColor }} aria-hidden />
-          {nowName}
+          {nowChain.map((item, index) => (
+            <React.Fragment key={`${index}:${item.name}`}>
+              {index > 0 ? <span className={s.nowSeparator}>›</span> : null}
+              <span className={s.nowSegment}>
+                {item.icon ? <NowChainIcon url={item.icon} /> : null}
+                <span className={s.nowLabel}>{item.name}</span>
+              </span>
+            </React.Fragment>
+          ))}
         </span>
       ) : null}
-      <div className={cx(s.dotsSlot, { [s.dotsSlotStart]: !nowName })} ref={dotsSlotRef}>
+      <div className={cx(s.dotsSlot, { [s.dotsSlotStart]: !nowChain?.length })} ref={dotsSlotRef}>
         {showBar ? <AvailabilityBar all={allItems} delay={delay} /> : renderDots()}
       </div>
     </div>

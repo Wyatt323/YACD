@@ -164,7 +164,7 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
               <div className={s0.group} key={name} style={{ order: originalIndex }}>
                 <ProxyGroup
                   name={name}
-                  iconOverride={activeIcons?.[name]}
+                  iconOverrides={activeIcons || {}}
                   onEditIcon={() => setEditingGroupName(name)}
                   delay={delay}
                   apiConfig={apiConfig}
