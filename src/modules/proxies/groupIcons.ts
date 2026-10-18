@@ -86,11 +86,12 @@ export async function importBrowserIcons(icons: Record<string, string>): Promise
 export async function saveServerIcon(
   group: string,
   url: string | undefined,
+  templateId: string,
 ): Promise<ServerIconSet> {
   const response = await fetch(ICON_ENDPOINT, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ group, url: url ?? null }),
+    body: JSON.stringify({ group, url: url ?? null, templateId }),
   });
   if (!response.ok) throw new Error(`Icon save failed: ${response.status}`);
   return (await response.json()) as ServerIconSet;

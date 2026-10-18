@@ -16,9 +16,6 @@ services:
       context: ./server
     restart: always
     environment:
-      # Use the name of the current OpenWrt/Mihomo configuration.
-      # Change it only when switching to another configuration.
-      YACD_PROFILE_KEY: openwrt-main
       YACD_ICON_DATA_FILE: /data/group-icons.json
     volumes:
       - ./yacd-data:/data

@@ -1,20 +1,20 @@
 # Yacd-meta with Oasisic icon library
 
-This branch keeps the upstream Yacd-meta history and adds an Oasisic icon picker on the Proxies page. Logo choices do not change Mihomo's configuration. In the Docker deployment below, choices are shared through a persistent server file and keyed by the resolved configuration file path. A static `gh-pages` or `external-ui` deployment still uses browser storage because Mihomo does not provide a custom icon storage API.
+This branch keeps the upstream Yacd-meta history and adds an Oasisic icon picker on the Proxies page. Logo choices do not change Mihomo's configuration. In the Docker deployment below, choices and the selected template are shared through a persistent server file. A static `gh-pages` or `external-ui` deployment still uses browser storage because Mihomo does not provide a custom icon storage API.
 
 ## Shared icons with Docker
 
 Copy `docker-compose.icons.yml`, replace the example configuration directory mount and Mihomo API address, then run `docker compose -f docker-compose.icons.yml up -d --build`. Open the panel at `http://YOUR_SERVER_IP:9080`. The panel's `/_yacd/icons` endpoint stores assignments in `/data/group-icons.json`; keep `/data` on a persistent volume. The configuration directory is mounted read-only at `/config` and is never edited by the icon service.
 
-The service identifies the active icon set by the configuration file's resolved path. Reloading or updating the same file keeps the icons. To use a different icon set, point `YACD_CONFIG_FILE` at another file path and restart the container. A symlink can be used to switch files without changing the environment variable; refresh the panel after switching. Existing browser choices are imported once for a new server profile when the old and new panels use the same browser origin and backend URL.
+Create and select icon templates on the Proxies page. Reloading or updating a Mihomo configuration keeps the selected template's icons. When changing to another configuration, select its matching template in the panel. Older installations using `YACD_CONFIG_FILE` or `YACD_PROFILE_KEY` migrate their saved icons into templates when the service first starts. Existing browser choices are imported once into an uninitialized server template when the old and new panels use the same browser origin and backend URL.
 
 The Docker panel and the Mihomo controller are on different origins, so allow the panel origin in Mihomo's `external-controller-cors` setting. Set `YACD_DEFAULT_BACKEND` to an API address reachable from users' devices. Keep the panel on a trusted network or protect it with an authenticating reverse proxy: anyone who can access the panel can change shared icons. The static UI ZIP from `gh-pages` cannot provide shared server storage on its own.
 
 ### Existing nginx container
 
-For a deployment that mounts `./conf.d` and `./html` into a stock `nginx` image, use `docker-compose.nginx-sidecar.yml` as a starting point. Keep the built UI in `./html`. The separate `yacd-icon-store` service writes to the host directory `./yacd-data`, which is mounted only into that service and must not be placed under `./html`. If Mihomo runs on another machine, set `YACD_PROFILE_KEY` to a stable name for the active OpenWrt configuration. No OpenWrt filesystem mount is needed.
+For a deployment that mounts `./conf.d` and `./html` into a stock `nginx` image, use `docker-compose.nginx-sidecar.yml` as a starting point. Keep the built UI in `./html`. The separate `yacd-icon-store` service writes to the host directory `./yacd-data`, which is mounted only into that service and must not be placed under `./html`. The Proxies page can create, rename, delete, and select shared icon templates; no OpenWrt filesystem mount or manual profile key is needed.
 
-Add both exact locations below to the existing nginx `server { ... }` in `./conf.d`:
+Add all three exact locations below to the existing nginx `server { ... }` in `./conf.d`:
 
 ```nginx
 client_max_body_size 2m;
@@ -24,9 +24,12 @@ location = /_yacd/icons {
 location = /_yacd/libraries {
     proxy_pass http://yacd-icon-store:3001;
 }
+location = /_yacd/templates {
+    proxy_pass http://yacd-icon-store:3001;
+}
 ```
 
-The icon service has no published host port. If you keep your own Compose file, add the `yacd-icon-store` service and the two nginx locations there. On the host, back up `./yacd-data/group-icons.json`. The same `YACD_PROFILE_KEY` keeps the same icon set, including after config content updates. When switching to another OpenWrt configuration, change the key and recreate the icon-store container. The Docker host cannot detect that remote switch automatically without an additional integration. The older local-file deployment still supports `YACD_CONFIG_FILE` when both services run on the same machine.
+The icon service has no published host port. If you keep your own Compose file, add the `yacd-icon-store` service and the three nginx locations there. On the host, back up `./yacd-data/group-icons.json`. Each template keeps its icons when the OpenWrt configuration is updated. When switching the configuration on OpenWrt, select its matching icon template in the Proxies page. The Docker host cannot detect that remote switch automatically without an additional integration. The older local-file and manual profile-key settings are used only to name an existing saved icon set during migration to templates.
 
 ## Icon libraries and configuration defaults
 

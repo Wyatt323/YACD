@@ -3,6 +3,7 @@ import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GroupIconPicker } from '~/components/proxies/GroupIconPicker';
+import { IconTemplateManager } from '~/components/proxies/IconTemplateManager';
 import { ProxiesHeader } from '~/components/proxies/ProxiesHeader';
 import { ProxyGroup } from '~/components/proxies/ProxyGroup';
 import { ProxyProvider } from '~/components/proxies/ProxyProvider';
@@ -16,6 +17,14 @@ import {
   saveServerIcon,
   ServerIconSet,
 } from '~/modules/proxies/groupIcons';
+import {
+  createIconTemplate,
+  deleteIconTemplate,
+  fetchIconTemplates,
+  IconTemplateState,
+  renameIconTemplate,
+  selectIconTemplate,
+} from '~/modules/proxies/iconTemplates';
 import {
   useCollapseAll,
   useDelayMapping,
@@ -41,6 +50,7 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
   const { t } = useTranslation();
   const [iconAssignments, setIconAssignments] = React.useState(readGroupIconAssignments);
   const [serverIconSet, setServerIconSet] = React.useState<ServerIconSet | null>(null);
+  const [templateState, setTemplateState] = React.useState<IconTemplateState | null>(null);
   const [iconStorage, setIconStorage] = React.useState<'loading' | 'local' | 'server' | 'error'>(
     'loading',
   );
@@ -56,9 +66,17 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
         let saved = await fetchServerIcons();
         if (!active || generation !== iconWriteGeneration.current) return;
         if (!saved) {
+          setTemplateState(null);
           setIconStorage('local');
           return;
         }
+        let templates = await fetchIconTemplates();
+        if (saved.profile.id !== templates.activeId) {
+          saved = await fetchServerIcons();
+          templates = await fetchIconTemplates();
+          if (!saved || saved.profile.id !== templates.activeId) return;
+        }
+        if (!active || generation !== iconWriteGeneration.current) return;
         const oldIcons = browserIconsNeedMigration(backendKey)
           ? readGroupIconAssignments()[backendKey] || {}
           : {};
@@ -66,6 +84,7 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
         if (!active || generation !== iconWriteGeneration.current) return;
         markBrowserIconsMigrated(backendKey);
         setServerIconSet(saved);
+        setTemplateState(templates);
         setIconStorage('server');
       } catch (error) {
         console.error('Cannot load shared group icons', error);
@@ -93,7 +112,8 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
     async (groupName: string, url: string | undefined) => {
       if (iconStorage === 'server') {
         iconWriteGeneration.current += 1;
-        const saved = await saveServerIcon(groupName, url);
+        if (!serverIconSet) throw new Error('Icon template is unavailable');
+        const saved = await saveServerIcon(groupName, url, serverIconSet.profile.id);
         setServerIconSet(saved);
         return;
       }
@@ -105,10 +125,26 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
         return { ...previous, [backendKey]: backendIcons };
       });
     },
-    [backendKey, iconStorage],
+    [backendKey, iconStorage, serverIconSet],
   );
 
   const activeIcons = iconStorage === 'server' ? serverIconSet?.icons : iconAssignments[backendKey];
+
+  const changeTemplate = async (action: () => Promise<IconTemplateState>) => {
+    iconWriteGeneration.current += 1;
+    let templates = await action();
+    let icons = await fetchServerIcons();
+    if (icons?.profile.id !== templates.activeId) {
+      templates = await fetchIconTemplates();
+      icons = await fetchServerIcons();
+    }
+    if (!icons || icons.profile.id !== templates.activeId) {
+      throw new Error('Icon template changed; please retry');
+    }
+    setTemplateState(templates);
+    setServerIconSet(icons);
+    setEditingGroupName(null);
+  };
 
   // the panel's configured test URL only feeds the latency-color threshold here;
   // the actual URL used per request is resolved in the mutation hooks
@@ -231,8 +267,14 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
         onUpdateAllProviders={updateAllProviders}
         isUpdatingProviders={isUpdatingProviders}
       />
-      {iconStorage === 'server' && serverIconSet ? (
-        <p role="status">{t('group_icons_server_profile', { name: serverIconSet.profile.name })}</p>
+      {iconStorage === 'server' && templateState ? (
+        <IconTemplateManager
+          state={templateState}
+          onCreate={(name) => changeTemplate(() => createIconTemplate(name))}
+          onSelect={(id) => changeTemplate(() => selectIconTemplate(id))}
+          onRename={(id, name) => changeTemplate(() => renameIconTemplate(id, name))}
+          onDelete={(id) => changeTemplate(() => deleteIconTemplate(id))}
+        />
       ) : null}
       {iconStorage === 'error' ? <p role="alert">{t('group_icons_server_error')}</p> : null}
       {content}

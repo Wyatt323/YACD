@@ -9,7 +9,7 @@ const dataFile = process.env.YACD_ICON_DATA_FILE || '/data/group-icons.json';
 const port = Number(process.env.YACD_ICON_PORT || 3001);
 const host = process.env.YACD_ICON_HOST || '127.0.0.1';
 
-function profile() {
+function legacyProfile() {
   if (profileKey) {
     if (profileKey.length > 256) throw new Error('YACD_PROFILE_KEY is too long');
     return {
@@ -24,6 +24,34 @@ function profile() {
     id: crypto.createHash('sha256').update(resolved).digest('hex'),
     name: path.basename(resolved),
   };
+}
+
+function ensureTemplates(data) {
+  if (Array.isArray(data.templates) && data.templates.length > 0) return false;
+  const legacy = legacyProfile();
+  const savedIds = Object.keys(data.profiles);
+  data.templates = savedIds.map((id, index) => ({
+    id,
+    name: id === legacy?.id ? legacy.name : `旧模板 ${index + 1}`,
+  }));
+  if (legacy && !savedIds.includes(legacy.id)) data.templates.push(legacy);
+  if (data.templates.length === 0) {
+    data.templates.push(legacy || { id: crypto.randomUUID(), name: '默认模板' });
+  }
+  data.activeTemplateId = legacy?.id || data.templates[0].id;
+  return true;
+}
+
+function activeTemplate(data) {
+  return data.templates.find((item) => item.id === data.activeTemplateId) || data.templates[0];
+}
+
+function validTemplateName(name) {
+  return typeof name === 'string' && name.trim().length > 0 && name.trim().length <= 80;
+}
+
+function templateList(data) {
+  return { templates: data.templates, activeId: activeTemplate(data).id };
 }
 
 function readData() {
@@ -107,11 +135,67 @@ function validLibrary(library) {
 
 const server = http.createServer(async (request, response) => {
   const pathname = new URL(request.url, 'http://localhost').pathname;
-  if (pathname !== '/_yacd/icons' && pathname !== '/_yacd/libraries') {
+  if (!['/_yacd/icons', '/_yacd/libraries', '/_yacd/templates'].includes(pathname)) {
     return send(response, 404, { error: 'Not found' });
   }
 
   try {
+    if (pathname === '/_yacd/templates') {
+      if (request.method === 'GET') {
+        const data = readData();
+        if (ensureTemplates(data)) writeData(data);
+        return send(response, 200, templateList(data));
+      }
+      if (!['POST', 'PATCH', 'DELETE'].includes(request.method)) {
+        return send(response, 405, { error: 'Method not allowed' });
+      }
+      if (!request.headers['content-type']?.startsWith('application/json')) {
+        return send(response, 415, { error: 'JSON required' });
+      }
+      const body = await readBody(request);
+      const data = readData();
+      if (ensureTemplates(data)) writeData(data);
+      if (request.method === 'POST') {
+        if (!validTemplateName(body?.name) || data.templates.length >= 50) {
+          return send(response, 400, { error: 'Invalid template name or limit reached' });
+        }
+        const name = body.name.trim();
+        if (data.templates.some((item) => item.name === name)) {
+          return send(response, 409, { error: 'Template name already exists' });
+        }
+        const entry = { id: crypto.randomUUID(), name };
+        data.templates.push(entry);
+        data.profiles[entry.id] = { icons: {} };
+        data.activeTemplateId = entry.id;
+      } else {
+        const index = data.templates.findIndex((item) => item.id === body?.id);
+        if (index < 0) return send(response, 404, { error: 'Template not found' });
+        if (request.method === 'PATCH') {
+          if (body.name !== undefined) {
+            if (!validTemplateName(body.name)) {
+              return send(response, 400, { error: 'Invalid template name' });
+            }
+            const name = body.name.trim();
+            if (data.templates.some((item, i) => i !== index && item.name === name)) {
+              return send(response, 409, { error: 'Template name already exists' });
+            }
+            data.templates[index].name = name;
+          } else {
+            data.activeTemplateId = body.id;
+          }
+        } else {
+          if (data.templates.length === 1) {
+            return send(response, 400, { error: 'Cannot delete the last template' });
+          }
+          const [deleted] = data.templates.splice(index, 1);
+          delete data.profiles[deleted.id];
+          if (data.activeTemplateId === deleted.id) data.activeTemplateId = data.templates[0].id;
+        }
+      }
+      writeData(data);
+      return send(response, 200, templateList(data));
+    }
+
     if (pathname === '/_yacd/libraries') {
       if (request.method === 'GET') {
         return send(response, 200, { libraries: readData().libraries || [] });
@@ -151,10 +235,10 @@ const server = http.createServer(async (request, response) => {
       return send(response, 200, { libraries });
     }
 
-    const current = profile();
-    if (!current) return send(response, 404, { error: 'Shared icon storage not configured' });
+    let data = readData();
+    if (ensureTemplates(data)) writeData(data);
+    let current = activeTemplate(data);
     if (request.method === 'GET') {
-      const data = readData();
       const saved = data.profiles[current.id];
       return send(response, 200, {
         profile: current,
@@ -170,7 +254,12 @@ const server = http.createServer(async (request, response) => {
       return send(response, 415, { error: 'JSON required' });
     }
     const body = await readBody(request);
-    const data = readData();
+    data = readData();
+    if (ensureTemplates(data)) writeData(data);
+    current = activeTemplate(data);
+    if (body?.templateId && body.templateId !== current.id) {
+      return send(response, 409, { error: 'Active template changed; refresh and retry' });
+    }
     const icons = data.profiles[current.id]?.icons || {};
     if (request.method === 'PATCH') {
       if (!body || !validGroup(body.group) || (body.url !== null && !validIcon(body.url))) {
