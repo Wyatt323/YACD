@@ -232,4 +232,7 @@ export const data = {
   use_icon_url: 'Use URL',
   invalid_icon_url: 'Enter a valid HTTP or HTTPS image URL',
   reset_group_icon: 'Use configuration icon',
+  group_icons_server_profile: 'Shared icons for configuration: {{name}}',
+  group_icons_server_error: 'Shared icon storage is unavailable. Check the panel server and configuration file mount.',
+  group_icon_save_failed: 'Could not save the icon. Please try again.',
 };

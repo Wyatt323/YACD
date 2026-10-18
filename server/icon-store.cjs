@@ -1,0 +1,125 @@
+const http = require('node:http');
+const fs = require('node:fs');
+const path = require('node:path');
+const crypto = require('node:crypto');
+
+const configFile = process.env.YACD_CONFIG_FILE;
+const dataFile = process.env.YACD_ICON_DATA_FILE || '/data/group-icons.json';
+const port = Number(process.env.YACD_ICON_PORT || 3001);
+
+function profile() {
+  if (!configFile) return null;
+  const resolved = fs.realpathSync(configFile);
+  if (!fs.statSync(resolved).isFile()) throw new Error('Config path is not a file');
+  return {
+    id: crypto.createHash('sha256').update(resolved).digest('hex'),
+    name: path.basename(resolved),
+  };
+}
+
+function readData() {
+  try {
+    const data = JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+    if (data?.version === 1 && data.profiles && typeof data.profiles === 'object') return data;
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  return { version: 1, profiles: {} };
+}
+
+function writeData(data) {
+  fs.mkdirSync(path.dirname(dataFile), { recursive: true });
+  const temporary = `${dataFile}.${process.pid}.tmp`;
+  fs.writeFileSync(temporary, `${JSON.stringify(data, null, 2)}\n`, { mode: 0o600 });
+  fs.renameSync(temporary, dataFile);
+}
+
+function send(response, status, body) {
+  response.writeHead(status, {
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  response.end(JSON.stringify(body));
+}
+
+async function readBody(request) {
+  let text = '';
+  for await (const chunk of request) {
+    text += chunk;
+    if (text.length > 64_000) throw new Error('Request is too large');
+  }
+  return JSON.parse(text);
+}
+
+function validIcon(url) {
+  if (typeof url !== 'string' || url.length > 2048) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function validGroup(group) {
+  return typeof group === 'string' && group.length > 0 && group.length <= 256 &&
+    !['__proto__', 'prototype', 'constructor'].includes(group);
+}
+
+const server = http.createServer(async (request, response) => {
+  const pathname = new URL(request.url, 'http://localhost').pathname;
+  if (pathname !== '/_yacd/icons') return send(response, 404, { error: 'Not found' });
+
+  try {
+    const current = profile();
+    if (!current) return send(response, 404, { error: 'Shared icon storage not configured' });
+    if (request.method === 'GET') {
+      const data = readData();
+      const saved = data.profiles[current.id];
+      return send(response, 200, {
+        profile: current,
+        icons: saved?.icons || {},
+        initialized: Boolean(saved),
+      });
+    }
+
+    if (request.method !== 'PATCH' && request.method !== 'POST') {
+      return send(response, 405, { error: 'Method not allowed' });
+    }
+    if (!request.headers['content-type']?.startsWith('application/json')) {
+      return send(response, 415, { error: 'JSON required' });
+    }
+    const body = await readBody(request);
+    const data = readData();
+    const icons = data.profiles[current.id]?.icons || {};
+    if (request.method === 'PATCH') {
+      if (!body || !validGroup(body.group) || (body.url !== null && !validIcon(body.url))) {
+        return send(response, 400, { error: 'Invalid group or icon URL' });
+      }
+      if (body.url === null) delete icons[body.group];
+      else icons[body.group] = body.url;
+    } else {
+      if (!body || !body.icons || typeof body.icons !== 'object' || Array.isArray(body.icons)) {
+        return send(response, 400, { error: 'Invalid icon map' });
+      }
+      for (const [group, url] of Object.entries(body.icons)) {
+        if (!validGroup(group) || !validIcon(url)) {
+          return send(response, 400, { error: 'Invalid icon map' });
+        }
+      }
+      // Migrate old browser settings only into an empty server profile.
+      if (!data.profiles[current.id]) Object.assign(icons, body.icons);
+    }
+    data.profiles[current.id] = { icons };
+    writeData(data);
+    return send(response, 200, { profile: current, icons, initialized: true });
+  } catch (error) {
+    console.error('Icon storage error:', error);
+    return send(response, 503, { error: 'Icon storage unavailable' });
+  }
+});
+
+server.listen(port, '127.0.0.1', () => {
+  console.log(`Yacd icon storage listening on 127.0.0.1:${port}`);
+});

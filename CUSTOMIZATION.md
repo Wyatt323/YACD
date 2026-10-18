@@ -1,6 +1,14 @@
 # Yacd-meta with Oasisic icon library
 
-This branch keeps the upstream Yacd-meta history and adds a browser-side Oasisic icon picker on the Proxies page. Logo choices are stored in the browser, per backend URL and group name. They do not change Mihomo's configuration.
+This branch keeps the upstream Yacd-meta history and adds an Oasisic icon picker on the Proxies page. Logo choices do not change Mihomo's configuration. In the Docker deployment below, choices are shared through a persistent server file and keyed by the resolved configuration file path. A static `gh-pages` or `external-ui` deployment still uses browser storage because Mihomo does not provide a custom icon storage API.
+
+## Shared icons with Docker
+
+Copy `docker-compose.icons.yml`, replace the example configuration directory mount and Mihomo API address, then run `docker compose -f docker-compose.icons.yml up -d --build`. Open the panel at `http://YOUR_SERVER_IP:9080`. The panel's `/_yacd/icons` endpoint stores assignments in `/data/group-icons.json`; keep `/data` on a persistent volume. The configuration directory is mounted read-only at `/config` and is never edited by the icon service.
+
+The service identifies the active icon set by the configuration file's resolved path. Reloading or updating the same file keeps the icons. To use a different icon set, point `YACD_CONFIG_FILE` at another file path and restart the container. A symlink can be used to switch files without changing the environment variable; refresh the panel after switching. Existing browser choices are imported once for a new server profile when the old and new panels use the same browser origin and backend URL.
+
+The Docker panel and the Mihomo controller are on different origins, so allow the panel origin in Mihomo's `external-controller-cors` setting. Set `YACD_DEFAULT_BACKEND` to an API address reachable from users' devices. Keep the panel on a trusted network or protect it with an authenticating reverse proxy: anyone who can access the panel can change shared icons. The static UI ZIP from `gh-pages` cannot provide shared server storage on its own.
 
 ## Upstream updates
 

@@ -1,11 +1,19 @@
 import cx from 'clsx';
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { GroupIconPicker } from '~/components/proxies/GroupIconPicker';
 import { ProxiesHeader } from '~/components/proxies/ProxiesHeader';
 import { ProxyGroup } from '~/components/proxies/ProxyGroup';
 import { ProxyProvider } from '~/components/proxies/ProxyProvider';
-import { readGroupIconAssignments, saveGroupIconAssignments } from '~/modules/proxies/groupIcons';
+import {
+  fetchServerIcons,
+  importBrowserIcons,
+  readGroupIconAssignments,
+  saveGroupIconAssignments,
+  saveServerIcon,
+  ServerIconSet,
+} from '~/modules/proxies/groupIcons';
 import {
   useCollapseAll,
   useDelayMapping,
@@ -28,16 +36,61 @@ type Props = {
 };
 
 export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
+  const { t } = useTranslation();
   const [iconAssignments, setIconAssignments] = React.useState(readGroupIconAssignments);
+  const [serverIconSet, setServerIconSet] = React.useState<ServerIconSet | null>(null);
+  const [iconStorage, setIconStorage] = React.useState<'loading' | 'local' | 'server' | 'error'>('loading');
+  const iconWriteGeneration = React.useRef(0);
   const [editingGroupName, setEditingGroupName] = React.useState<string | null>(null);
   const backendKey = apiConfig.baseURL || 'default';
+
+  React.useEffect(() => {
+    let active = true;
+    async function refresh() {
+      const generation = iconWriteGeneration.current;
+      try {
+        let saved = await fetchServerIcons();
+        if (!active || generation !== iconWriteGeneration.current) return;
+        if (!saved) {
+          setIconStorage('local');
+          return;
+        }
+        const oldIcons = readGroupIconAssignments()[backendKey] || {};
+        if (!saved.initialized) saved = await importBrowserIcons(oldIcons);
+        if (!active || generation !== iconWriteGeneration.current) return;
+        setServerIconSet(saved);
+        setIconStorage('server');
+      } catch (error) {
+        console.error('Cannot load shared group icons', error);
+        if (active && generation === iconWriteGeneration.current) setIconStorage('error');
+      }
+    }
+    void refresh();
+    const interval = window.setInterval(() => void refresh(), 30_000);
+    const onVisible = () => {
+      if (!document.hidden) void refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [backendKey]);
 
   React.useEffect(() => {
     saveGroupIconAssignments(iconAssignments);
   }, [iconAssignments]);
 
   const setGroupIcon = React.useCallback(
-    (groupName: string, url: string | undefined) => {
+    async (groupName: string, url: string | undefined) => {
+      if (iconStorage === 'server') {
+        iconWriteGeneration.current += 1;
+        const saved = await saveServerIcon(groupName, url);
+        setServerIconSet(saved);
+        return;
+      }
+      if (iconStorage !== 'local') throw new Error('Icon storage is unavailable');
       setIconAssignments((previous) => {
         const backendIcons = { ...(previous[backendKey] || {}) };
         if (url) backendIcons[groupName] = url;
@@ -45,8 +98,10 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
         return { ...previous, [backendKey]: backendIcons };
       });
     },
-    [backendKey],
+    [backendKey, iconStorage],
   );
+
+  const activeIcons = iconStorage === 'server' ? serverIconSet?.icons : iconAssignments[backendKey];
 
   // the panel's configured test URL only feeds the latency-color threshold here;
   // the actual URL used per request is resolved in the mutation hooks
@@ -109,7 +164,7 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
               <div className={s0.group} key={name} style={{ order: originalIndex }}>
                 <ProxyGroup
                   name={name}
-                  iconOverride={iconAssignments[backendKey]?.[name]}
+                  iconOverride={activeIcons?.[name]}
                   onEditIcon={() => setEditingGroupName(name)}
                   delay={delay}
                   apiConfig={apiConfig}
@@ -169,11 +224,15 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
         onUpdateAllProviders={updateAllProviders}
         isUpdatingProviders={isUpdatingProviders}
       />
+      {iconStorage === 'server' && serverIconSet ? (
+        <p role="status">{t('group_icons_server_profile', { name: serverIconSet.profile.name })}</p>
+      ) : null}
+      {iconStorage === 'error' ? <p role="alert">{t('group_icons_server_error')}</p> : null}
       {content}
       <GroupIconPicker
         isOpen={editingGroupName !== null}
         groupName={editingGroupName || ''}
-        selectedUrl={editingGroupName ? iconAssignments[backendKey]?.[editingGroupName] : undefined}
+        selectedUrl={editingGroupName ? activeIcons?.[editingGroupName] : undefined}
         onSelect={(url) => {
           if (editingGroupName) setGroupIcon(editingGroupName, url);
         }}

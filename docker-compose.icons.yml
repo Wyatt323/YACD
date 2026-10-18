@@ -1,0 +1,14 @@
+services:
+  yacd:
+    build: .
+    ports:
+      - '9080:80'
+    environment:
+      YACD_DEFAULT_BACKEND: 'http://192.168.1.2:9090'
+      YACD_CONFIG_FILE: /config/config.yaml
+      YACD_ICON_DATA_FILE: /data/group-icons.json
+    volumes:
+      # Mount the directory so different files keep different icon sets.
+      - /path/to/mihomo:/config:ro
+      - ./yacd-data:/data
+    restart: unless-stopped

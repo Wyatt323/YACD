@@ -13,7 +13,7 @@ type Props = {
   isOpen: boolean;
   groupName: string;
   selectedUrl?: string;
-  onSelect: (url: string | undefined) => void;
+  onSelect: (url: string | undefined) => Promise<void> | void;
   onClose: () => void;
 };
 
@@ -23,6 +23,8 @@ export function GroupIconPicker({ isOpen, groupName, selectedUrl, onSelect, onCl
   const [category, setCategory] = React.useState('');
   const [customUrl, setCustomUrl] = React.useState('');
   const [invalidUrl, setInvalidUrl] = React.useState(false);
+  const [saveError, setSaveError] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -30,6 +32,7 @@ export function GroupIconPicker({ isOpen, groupName, selectedUrl, onSelect, onCl
       setCategory('');
       setCustomUrl('');
       setInvalidUrl(false);
+      setSaveError(false);
     }
   }, [isOpen]);
 
@@ -42,9 +45,19 @@ export function GroupIconPicker({ isOpen, groupName, selectedUrl, onSelect, onCl
     );
   }, [category, search]);
 
-  const choose = (url: string | undefined) => {
-    onSelect(url);
-    onClose();
+  const choose = async (url: string | undefined) => {
+    if (saving) return;
+    setSaving(true);
+    setSaveError(false);
+    try {
+      await onSelect(url);
+      onClose();
+    } catch (error) {
+      console.error('Cannot save group icon', error);
+      setSaveError(true);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const chooseCustom = (event: React.FormEvent) => {
@@ -54,7 +67,7 @@ export function GroupIconPicker({ isOpen, groupName, selectedUrl, onSelect, onCl
       setInvalidUrl(true);
       return;
     }
-    choose(url);
+    void choose(url);
   };
 
   return (
@@ -103,10 +116,11 @@ export function GroupIconPicker({ isOpen, groupName, selectedUrl, onSelect, onCl
             type="button"
             key={icon.url}
             className={`${s.iconButton} ${selectedUrl === icon.url ? s.selected : ''}`}
-            onClick={() => choose(icon.url)}
+            onClick={() => void choose(icon.url)}
             title={`${icon.name} · ${icon.category}`}
             aria-label={`${icon.name} · ${icon.category}`}
             aria-pressed={selectedUrl === icon.url}
+            disabled={saving}
           >
             <img src={icon.url} alt="" loading="lazy" referrerPolicy="no-referrer" />
             <span>{icon.name}</span>
@@ -128,16 +142,17 @@ export function GroupIconPicker({ isOpen, groupName, selectedUrl, onSelect, onCl
             }}
             placeholder="https://example.com/icon.png"
           />
-          <button type="submit">{t('use_icon_url')}</button>
+          <button type="submit" disabled={saving}>{t('use_icon_url')}</button>
         </div>
         {invalidUrl ? <p className={s.error}>{t('invalid_icon_url')}</p> : null}
+        {saveError ? <p className={s.error} role="alert">{t('group_icon_save_failed')}</p> : null}
       </form>
 
       <div className={s.footer}>
         <a href="https://github.com/Hawaiine/Oasisic-Icons" target="_blank" rel="noreferrer">
           Oasisic-Icons
         </a>
-        <button type="button" onClick={() => choose(undefined)}>
+        <button type="button" onClick={() => void choose(undefined)} disabled={saving}>
           {t('reset_group_icon')}
         </button>
       </div>

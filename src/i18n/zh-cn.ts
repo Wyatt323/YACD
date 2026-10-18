@@ -232,4 +232,7 @@ export const data = {
   use_icon_url: '使用 URL',
   invalid_icon_url: '请输入有效的 HTTP 或 HTTPS 图片地址',
   reset_group_icon: '使用配置中的图标',
+  group_icons_server_profile: '当前配置文件的共享图标：{{name}}',
+  group_icons_server_error: '共享图标存储不可用，请检查面板服务和配置文件挂载。',
+  group_icon_save_failed: '图标保存失败，请重试。',
 };
