@@ -63,7 +63,7 @@ jobs:
 
       - name: Save downloadable UI bundle
         if: steps.upstream.outputs.changed == 'true' || github.event_name != 'schedule'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: yacd-meta-oasisic-ui
           path: public/
