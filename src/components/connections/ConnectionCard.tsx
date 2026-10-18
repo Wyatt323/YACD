@@ -8,14 +8,21 @@ import { formatElapsed, getDateFnsLocale } from '~/modules/connections/utils';
 import { FormattedConn } from '~/store/connections';
 
 import s from './ConnectionCard.module.scss';
+import { ConnectionChainIcon } from './ConnectionChainIcon';
 
 interface Props {
   conn: FormattedConn;
+  chainIcons: Record<string, string>;
   onDisconnect: (id: string, e: React.MouseEvent) => void;
   onClick: () => void;
 }
 
-const ConnectionCard = React.memo(function ConnectionCard({ conn, onDisconnect, onClick }: Props) {
+const ConnectionCard = React.memo(function ConnectionCard({
+  conn,
+  chainIcons,
+  onDisconnect,
+  onClick,
+}: Props) {
   const { i18n } = useTranslation();
 
   const timeAgo = formatElapsed(conn.start, getDateFnsLocale(i18n.language));
@@ -62,6 +69,17 @@ const ConnectionCard = React.memo(function ConnectionCard({ conn, onDisconnect, 
           <span className={s.arrow} aria-hidden>
             ›
           </span>
+          {conn.chainGroup ? (
+            <span className={s.group} title={conn.chainGroup}>
+              <ConnectionChainIcon name={conn.chainGroup} icons={chainIcons} />
+              <span>{conn.chainGroup}</span>
+            </span>
+          ) : null}
+          {conn.chainGroup ? (
+            <span className={s.arrow} aria-hidden>
+              ›
+            </span>
+          ) : null}
           <span className={s.node}>{conn.chainNode}</span>
         </div>
         <div className={s.speedAndAction}>

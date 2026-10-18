@@ -237,6 +237,19 @@
   white-space: nowrap;
 }
 
+.chainGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.chainGroupText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .chainSep {
   flex: 0 0 auto;
   font-size: 0.7rem;

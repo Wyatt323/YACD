@@ -17,6 +17,8 @@ import {
   sortConns,
   SortState,
 } from '~/modules/connections/utils';
+import { fetchServerIcons, readGroupIconAssignments } from '~/modules/proxies/groupIcons';
+import { useProxiesQuery } from '~/modules/proxies/hooks';
 import { ClashAPIConfig } from '~/types';
 
 import s from './Connections.module.scss';
@@ -34,6 +36,47 @@ type Props = {
 
 export default function Connections({ apiConfig }: Props) {
   const { t } = useTranslation();
+  const { data: proxyData } = useProxiesQuery(apiConfig);
+  const backendKey = apiConfig.baseURL || 'default';
+  const [iconOverrides, setIconOverrides] = useState<Record<string, string>>(
+    () => readGroupIconAssignments()[backendKey] || {},
+  );
+
+  React.useEffect(() => {
+    let active = true;
+    const refreshIcons = async () => {
+      try {
+        const saved = await fetchServerIcons();
+        if (active) {
+          setIconOverrides(saved?.icons || readGroupIconAssignments()[backendKey] || {});
+        }
+      } catch (error) {
+        console.error('Cannot load connection group icons', error);
+      }
+    };
+    void refreshIcons();
+    const interval = window.setInterval(() => void refreshIcons(), 30_000);
+    const onVisible = () => {
+      if (!document.hidden) void refreshIcons();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [backendKey]);
+
+  const chainIcons = React.useMemo(() => {
+    const configured = Object.entries(proxyData.proxies).reduce<Record<string, string>>(
+      (icons, [name, proxy]) => {
+        if (proxy.icon) icons[name] = proxy.icon;
+        return icons;
+      },
+      {},
+    );
+    return { ...configured, ...iconOverrides };
+  }, [proxyData.proxies, iconOverrides]);
   const [activeTab, setActiveTab] = useState<ConnTabKey>('active');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
@@ -129,6 +172,7 @@ export default function Connections({ apiConfig }: Props) {
           setSort={setSort}
           isClosed={isClosedTab}
           fullChain={settings.fullChain}
+          chainIcons={chainIcons}
           onCloseConn={closeConn}
         />
       </div>

@@ -15,6 +15,7 @@ import {
 import { FormattedConn } from '~/store/connections';
 
 import ConnectionCard from './ConnectionCard';
+import { ConnectionChainIcon } from './ConnectionChainIcon';
 import ConnectionDetailModal from './ConnectionDetailModal';
 import s from './ConnectionTable.module.scss';
 
@@ -73,6 +74,7 @@ function Cell({
   conn,
   isClosed,
   fullChain,
+  chainIcons,
   locale,
   onClose,
 }: {
@@ -80,6 +82,7 @@ function Cell({
   conn: FormattedConn;
   isClosed: boolean;
   fullChain: boolean;
+  chainIcons: Record<string, string>;
   locale: ReturnType<typeof getDateFnsLocale>;
   onClose: (id: string, e: React.MouseEvent) => void;
 }) {
@@ -128,9 +131,12 @@ function Cell({
     case 'chain': {
       if (fullChain) {
         return (
-          <span className={s.chainFull} title={conn.chainsFull}>
-            {conn.chainsFull}
-          </span>
+          <>
+            <ConnectionChainIcon name={conn.chainGroup} icons={chainIcons} />
+            <span className={s.chainFull} title={conn.chainsFull}>
+              {conn.chainsFull}
+            </span>
+          </>
         );
       }
       return (
@@ -138,7 +144,8 @@ function Cell({
           {conn.chainGroup ? (
             <>
               <span className={s.chainGroup} title={conn.chainGroup}>
-                {conn.chainGroup}
+                <ConnectionChainIcon name={conn.chainGroup} icons={chainIcons} />
+                <span className={s.chainGroupText}>{conn.chainGroup}</span>
               </span>
               <span className={s.chainSep} aria-hidden>
                 ›
@@ -206,6 +213,7 @@ type RowProps = {
   gridTemplate: string;
   isClosed: boolean;
   fullChain: boolean;
+  chainIcons: Record<string, string>;
   locale: ReturnType<typeof getDateFnsLocale>;
   onClose: (id: string, e: React.MouseEvent) => void;
   onOpenDetails: (conn: FormattedConn) => void;
@@ -220,6 +228,7 @@ function DesktopRow({
   gridTemplate,
   isClosed,
   fullChain,
+  chainIcons,
   locale,
   onClose,
   onOpenDetails,
@@ -253,6 +262,7 @@ function DesktopRow({
               conn={conn}
               isClosed={isClosed}
               fullChain={fullChain}
+              chainIcons={chainIcons}
               locale={locale}
               onClose={onClose}
             />
@@ -263,11 +273,23 @@ function DesktopRow({
   );
 }
 
-function MobileRow({ index, style, rows, onClose, onOpenDetails }: RowComponentProps<RowProps>) {
+function MobileRow({
+  index,
+  style,
+  rows,
+  chainIcons,
+  onClose,
+  onOpenDetails,
+}: RowComponentProps<RowProps>) {
   const conn = rows[index];
   return (
     <div style={style}>
-      <ConnectionCard conn={conn} onDisconnect={onClose} onClick={() => onOpenDetails(conn)} />
+      <ConnectionCard
+        conn={conn}
+        chainIcons={chainIcons}
+        onDisconnect={onClose}
+        onClick={() => onOpenDetails(conn)}
+      />
     </div>
   );
 }
@@ -280,6 +302,7 @@ type Props = {
   setSort: (key: string) => void;
   isClosed: boolean;
   fullChain: boolean;
+  chainIcons: Record<string, string>;
   onCloseConn: (id: string) => void;
 };
 
@@ -291,6 +314,7 @@ export default function ConnectionTable({
   setSort,
   isClosed,
   fullChain,
+  chainIcons,
   onCloseConn,
 }: Props) {
   const { t, i18n } = useTranslation();
@@ -357,6 +381,7 @@ export default function ConnectionTable({
       gridTemplate,
       isClosed,
       fullChain,
+      chainIcons,
       locale,
       onClose: handleClose,
       onOpenDetails: handleOpenDetails,
@@ -369,6 +394,7 @@ export default function ConnectionTable({
       gridTemplate,
       isClosed,
       fullChain,
+      chainIcons,
       locale,
       handleClose,
       handleOpenDetails,
