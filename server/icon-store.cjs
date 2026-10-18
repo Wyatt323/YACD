@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const configFile = process.env.YACD_CONFIG_FILE;
 const dataFile = process.env.YACD_ICON_DATA_FILE || '/data/group-icons.json';
 const port = Number(process.env.YACD_ICON_PORT || 3001);
+const host = process.env.YACD_ICON_HOST || '127.0.0.1';
 
 function profile() {
   if (!configFile) return null;
@@ -190,6 +191,6 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(port, '127.0.0.1', () => {
-  console.log(`Yacd icon storage listening on 127.0.0.1:${port}`);
+server.listen(port, host, () => {
+  console.log(`Yacd icon storage listening on ${host}:${port}`);
 });

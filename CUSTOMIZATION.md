@@ -10,6 +10,24 @@ The service identifies the active icon set by the configuration file's resolved 
 
 The Docker panel and the Mihomo controller are on different origins, so allow the panel origin in Mihomo's `external-controller-cors` setting. Set `YACD_DEFAULT_BACKEND` to an API address reachable from users' devices. Keep the panel on a trusted network or protect it with an authenticating reverse proxy: anyone who can access the panel can change shared icons. The static UI ZIP from `gh-pages` cannot provide shared server storage on its own.
 
+### Existing nginx container
+
+For a deployment that mounts `./conf.d` and `./html` into a stock `nginx` image, use `docker-compose.nginx-sidecar.yml` as a starting point. Keep the built UI in `./html`. The separate `yacd-icon-store` service writes to the host directory `./yacd-data`, which is mounted only into that service and must not be placed under `./html`. Mount the Mihomo configuration directory read-only into `/config`, and set `YACD_CONFIG_FILE` to the active file in that directory.
+
+Add both exact locations below to the existing nginx `server { ... }` in `./conf.d`:
+
+```nginx
+client_max_body_size 2m;
+location = /_yacd/icons {
+    proxy_pass http://yacd-icon-store:3001;
+}
+location = /_yacd/libraries {
+    proxy_pass http://yacd-icon-store:3001;
+}
+```
+
+The icon service has no published host port. If you keep your own Compose file, add the `yacd-icon-store` service and the two nginx locations there. On the host, back up `./yacd-data/group-icons.json` along with the Mihomo configuration. A path change in `YACD_CONFIG_FILE` selects another icon set; changing only the contents of the same file keeps the current set.
+
 ## Icon libraries and configuration defaults
 
 The picker includes Oasisic and accepts additional GitHub repository URLs or JSON catalog URLs. A GitHub repository import reads image files from its default branch using GitHub's public API. A JSON catalog may be an array of `{ "name", "category", "url" }` entries or an object with `name` and `icons`; icon URLs may be relative to the JSON URL. Use a URL that allows browser cross-origin access. Refresh an added library to import upstream changes. Added catalogs are shared by all devices in the Docker deployment and stored in `/data/group-icons.json`; static deployments store them in the browser.

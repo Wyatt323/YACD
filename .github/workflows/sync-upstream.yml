@@ -58,6 +58,7 @@ jobs:
           node --test server/icon-store.test.cjs
           bun run build
           docker build --tag yacd-icons:ci .
+          docker build --tag yacd-icon-store:ci ./server
 
       - name: Push verified upstream merge
         if: steps.upstream.outputs.changed == 'true'

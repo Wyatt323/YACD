@@ -1,0 +1,25 @@
+services:
+  nginx:
+    container_name: nginx-yacd
+    image: nginx
+    restart: always
+    ports:
+      - '9090:80'
+    volumes:
+      - ./conf.d/:/etc/nginx/conf.d:ro
+      - ./html:/usr/share/nginx/html:ro
+    depends_on:
+      - yacd-icon-store
+
+  yacd-icon-store:
+    build:
+      context: ./server
+    restart: always
+    environment:
+      YACD_CONFIG_FILE: /config/config.yaml
+      YACD_ICON_DATA_FILE: /data/group-icons.json
+    volumes:
+      # Replace with the directory containing the Mihomo config files.
+      - /path/to/mihomo/config:/config:ro
+      - ./yacd-data:/data
+    # No host port: only the nginx service can reach this API.
