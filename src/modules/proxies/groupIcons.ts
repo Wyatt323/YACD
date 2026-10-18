@@ -1,6 +1,28 @@
 export type GroupIconAssignments = Record<string, Record<string, string>>;
 
 const STORAGE_KEY = 'yacd-meta.group-icons.v1';
+const MIGRATION_KEY = 'yacd-meta.group-icons.server-migrated.v1';
+
+export function browserIconsNeedMigration(backendKey: string): boolean {
+  try {
+    const migrated = JSON.parse(localStorage.getItem(MIGRATION_KEY) || '[]');
+    return !Array.isArray(migrated) || !migrated.includes(backendKey);
+  } catch {
+    return true;
+  }
+}
+
+export function markBrowserIconsMigrated(backendKey: string): void {
+  try {
+    const migrated = JSON.parse(localStorage.getItem(MIGRATION_KEY) || '[]');
+    const keys = Array.isArray(migrated) ? migrated : [];
+    if (!keys.includes(backendKey)) {
+      localStorage.setItem(MIGRATION_KEY, JSON.stringify([...keys, backendKey]));
+    }
+  } catch {
+    // Unavailable browser storage does not prevent using shared icons.
+  }
+}
 
 export function readGroupIconAssignments(): GroupIconAssignments {
   try {

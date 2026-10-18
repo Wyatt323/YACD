@@ -4,11 +4,19 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 const configFile = process.env.YACD_CONFIG_FILE;
+const profileKey = process.env.YACD_PROFILE_KEY?.trim();
 const dataFile = process.env.YACD_ICON_DATA_FILE || '/data/group-icons.json';
 const port = Number(process.env.YACD_ICON_PORT || 3001);
 const host = process.env.YACD_ICON_HOST || '127.0.0.1';
 
 function profile() {
+  if (profileKey) {
+    if (profileKey.length > 256) throw new Error('YACD_PROFILE_KEY is too long');
+    return {
+      id: crypto.createHash('sha256').update(`profile:${profileKey}`).digest('hex'),
+      name: profileKey,
+    };
+  }
   if (!configFile) return null;
   const resolved = fs.realpathSync(configFile);
   if (!fs.statSync(resolved).isFile()) throw new Error('Config path is not a file');

@@ -7,8 +7,10 @@ import { ProxiesHeader } from '~/components/proxies/ProxiesHeader';
 import { ProxyGroup } from '~/components/proxies/ProxyGroup';
 import { ProxyProvider } from '~/components/proxies/ProxyProvider';
 import {
+  browserIconsNeedMigration,
   fetchServerIcons,
   importBrowserIcons,
+  markBrowserIconsMigrated,
   readGroupIconAssignments,
   saveGroupIconAssignments,
   saveServerIcon,
@@ -57,9 +59,12 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
           setIconStorage('local');
           return;
         }
-        const oldIcons = readGroupIconAssignments()[backendKey] || {};
+        const oldIcons = browserIconsNeedMigration(backendKey)
+          ? readGroupIconAssignments()[backendKey] || {}
+          : {};
         if (!saved.initialized) saved = await importBrowserIcons(oldIcons);
         if (!active || generation !== iconWriteGeneration.current) return;
+        markBrowserIconsMigrated(backendKey);
         setServerIconSet(saved);
         setIconStorage('server');
       } catch (error) {

@@ -12,7 +12,7 @@ The Docker panel and the Mihomo controller are on different origins, so allow th
 
 ### Existing nginx container
 
-For a deployment that mounts `./conf.d` and `./html` into a stock `nginx` image, use `docker-compose.nginx-sidecar.yml` as a starting point. Keep the built UI in `./html`. The separate `yacd-icon-store` service writes to the host directory `./yacd-data`, which is mounted only into that service and must not be placed under `./html`. Mount the Mihomo configuration directory read-only into `/config`, and set `YACD_CONFIG_FILE` to the active file in that directory.
+For a deployment that mounts `./conf.d` and `./html` into a stock `nginx` image, use `docker-compose.nginx-sidecar.yml` as a starting point. Keep the built UI in `./html`. The separate `yacd-icon-store` service writes to the host directory `./yacd-data`, which is mounted only into that service and must not be placed under `./html`. If Mihomo runs on another machine, set `YACD_PROFILE_KEY` to a stable name for the active OpenWrt configuration. No OpenWrt filesystem mount is needed.
 
 Add both exact locations below to the existing nginx `server { ... }` in `./conf.d`:
 
@@ -26,7 +26,7 @@ location = /_yacd/libraries {
 }
 ```
 
-The icon service has no published host port. If you keep your own Compose file, add the `yacd-icon-store` service and the two nginx locations there. On the host, back up `./yacd-data/group-icons.json` along with the Mihomo configuration. A path change in `YACD_CONFIG_FILE` selects another icon set; changing only the contents of the same file keeps the current set.
+The icon service has no published host port. If you keep your own Compose file, add the `yacd-icon-store` service and the two nginx locations there. On the host, back up `./yacd-data/group-icons.json`. The same `YACD_PROFILE_KEY` keeps the same icon set, including after config content updates. When switching to another OpenWrt configuration, change the key and recreate the icon-store container. The Docker host cannot detect that remote switch automatically without an additional integration. The older local-file deployment still supports `YACD_CONFIG_FILE` when both services run on the same machine.
 
 ## Icon libraries and configuration defaults
 

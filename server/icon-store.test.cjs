@@ -14,12 +14,13 @@ async function freePort() {
   return port;
 }
 
-async function start(configFile, dataFile) {
+async function start(configFile, dataFile, profileKey = '') {
   const port = await freePort();
   const child = spawn(process.execPath, [path.join(__dirname, 'icon-store.cjs')], {
     env: {
       ...process.env,
       YACD_CONFIG_FILE: configFile,
+      YACD_PROFILE_KEY: profileKey,
       YACD_ICON_DATA_FILE: dataFile,
       YACD_ICON_PORT: String(port),
     },
@@ -66,7 +67,9 @@ test('icons persist by configuration path and an empty profile does not reimport
     assert.equal(state.icons.Global, 'https://example.com/a.png');
     state = await change(instance.url, 'PATCH', { group: 'Global', url: null });
     assert.deepEqual(state.icons, {});
-    state = await change(instance.url, 'POST', { icons: { Global: 'https://example.com/old.png' } });
+    state = await change(instance.url, 'POST', {
+      icons: { Global: 'https://example.com/old.png' },
+    });
     assert.deepEqual(state.icons, {});
     const librariesURL = instance.url.replace('/icons', '/libraries');
     const library = {
@@ -84,11 +87,16 @@ test('icons persist by configuration path and an empty profile does not reimport
     state = await (await fetch(instance.url)).json();
     assert.equal(state.initialized, false);
     assert.deepEqual(state.icons, {});
-    state = await change(instance.url, 'PATCH', { group: 'Global', url: 'https://example.com/b.png' });
+    state = await change(instance.url, 'PATCH', {
+      group: 'Global',
+      url: 'https://example.com/b.png',
+    });
     assert.equal(state.icons.Global, 'https://example.com/b.png');
     libraryState = await (await fetch(instance.url.replace('/icons', '/libraries'))).json();
     assert.equal(libraryState.libraries[0].id, libraryId);
-    libraryState = await change(instance.url.replace('/icons', '/libraries'), 'DELETE', { id: libraryId });
+    libraryState = await change(instance.url.replace('/icons', '/libraries'), 'DELETE', {
+      id: libraryId,
+    });
     assert.deepEqual(libraryState.libraries, []);
     instance.child.kill();
 
@@ -96,6 +104,35 @@ test('icons persist by configuration path and an empty profile does not reimport
     state = await (await fetch(instance.url)).json();
     assert.equal(state.initialized, true);
     assert.deepEqual(state.icons, {});
+  } finally {
+    instance?.child.kill();
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('a manual profile key works without an OpenWrt configuration mount', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'yacd-profile-'));
+  const dataFile = path.join(directory, 'data', 'icons.json');
+  let instance;
+  try {
+    instance = await start('', dataFile, 'openwrt-main');
+    let state = await (await fetch(instance.url)).json();
+    assert.equal(state.profile.name, 'openwrt-main');
+    state = await change(instance.url, 'PATCH', {
+      group: 'Google',
+      url: 'https://example.com/google.png',
+    });
+    assert.equal(state.icons.Google, 'https://example.com/google.png');
+    instance.child.kill();
+
+    instance = await start('', dataFile, 'openwrt-other');
+    state = await (await fetch(instance.url)).json();
+    assert.deepEqual(state.icons, {});
+    instance.child.kill();
+
+    instance = await start('', dataFile, 'openwrt-main');
+    state = await (await fetch(instance.url)).json();
+    assert.equal(state.icons.Google, 'https://example.com/google.png');
   } finally {
     instance?.child.kill();
     fs.rmSync(directory, { recursive: true, force: true });
