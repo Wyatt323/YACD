@@ -39,7 +39,9 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
   const { t } = useTranslation();
   const [iconAssignments, setIconAssignments] = React.useState(readGroupIconAssignments);
   const [serverIconSet, setServerIconSet] = React.useState<ServerIconSet | null>(null);
-  const [iconStorage, setIconStorage] = React.useState<'loading' | 'local' | 'server' | 'error'>('loading');
+  const [iconStorage, setIconStorage] = React.useState<'loading' | 'local' | 'server' | 'error'>(
+    'loading',
+  );
   const iconWriteGeneration = React.useRef(0);
   const [editingGroupName, setEditingGroupName] = React.useState<string | null>(null);
   const backendKey = apiConfig.baseURL || 'default';
@@ -233,6 +235,8 @@ export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Pro
         isOpen={editingGroupName !== null}
         groupName={editingGroupName || ''}
         selectedUrl={editingGroupName ? activeIcons?.[editingGroupName] : undefined}
+        configIcon={editingGroupName ? proxies[editingGroupName]?.icon : undefined}
+        storageMode={iconStorage}
         onSelect={(url) => {
           if (editingGroupName) setGroupIcon(editingGroupName, url);
         }}

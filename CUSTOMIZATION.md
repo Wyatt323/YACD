@@ -10,6 +10,12 @@ The service identifies the active icon set by the configuration file's resolved 
 
 The Docker panel and the Mihomo controller are on different origins, so allow the panel origin in Mihomo's `external-controller-cors` setting. Set `YACD_DEFAULT_BACKEND` to an API address reachable from users' devices. Keep the panel on a trusted network or protect it with an authenticating reverse proxy: anyone who can access the panel can change shared icons. The static UI ZIP from `gh-pages` cannot provide shared server storage on its own.
 
+## Icon libraries and configuration defaults
+
+The picker includes Oasisic and accepts additional GitHub repository URLs or JSON catalog URLs. A GitHub repository import reads image files from its default branch using GitHub's public API. A JSON catalog may be an array of `{ "name", "category", "url" }` entries or an object with `name` and `icons`; icon URLs may be relative to the JSON URL. Use a URL that allows browser cross-origin access. Refresh an added library to import upstream changes. Added catalogs are shared by all devices in the Docker deployment and stored in `/data/group-icons.json`; static deployments store them in the browser.
+
+For each proxy group, Mihomo's `icon` field (including one generated from a subconverter INI `!!icon=` setting) is the default. An icon picked in the panel overrides it. Use “Use configuration icon” in the picker to remove the override and show the current configuration icon again.
+
 ## Upstream updates
 
 `.github/workflows/sync-upstream.yml` checks `MetaCubeX/Yacd-meta` every 15 minutes. It merges `upstream/master` into this branch, then runs lint, typecheck, and build. Only a successful merge and build are pushed. The same run publishes the built UI to the `gh-pages` branch and saves it as an Actions artifact.

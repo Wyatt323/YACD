@@ -47,7 +47,7 @@ async function readBody(request) {
   let text = '';
   for await (const chunk of request) {
     text += chunk;
-    if (text.length > 64_000) throw new Error('Request is too large');
+    if (text.length > 2_000_000) throw new Error('Request is too large');
   }
   return JSON.parse(text);
 }
@@ -63,15 +63,85 @@ function validIcon(url) {
 }
 
 function validGroup(group) {
-  return typeof group === 'string' && group.length > 0 && group.length <= 256 &&
-    !['__proto__', 'prototype', 'constructor'].includes(group);
+  return (
+    typeof group === 'string' &&
+    group.length > 0 &&
+    group.length <= 256 &&
+    !['__proto__', 'prototype', 'constructor'].includes(group)
+  );
+}
+
+function validLibrary(library) {
+  return (
+    library &&
+    typeof library.name === 'string' &&
+    library.name.length > 0 &&
+    library.name.length <= 100 &&
+    typeof library.source === 'string' &&
+    validIcon(library.source) &&
+    ['github', 'json'].includes(library.kind) &&
+    Array.isArray(library.icons) &&
+    library.icons.length > 0 &&
+    library.icons.length <= 5000 &&
+    library.icons.every(
+      (icon) =>
+        icon &&
+        typeof icon.name === 'string' &&
+        icon.name.length > 0 &&
+        icon.name.length <= 160 &&
+        typeof icon.category === 'string' &&
+        icon.category.length <= 160 &&
+        validIcon(icon.url),
+    )
+  );
 }
 
 const server = http.createServer(async (request, response) => {
   const pathname = new URL(request.url, 'http://localhost').pathname;
-  if (pathname !== '/_yacd/icons') return send(response, 404, { error: 'Not found' });
+  if (pathname !== '/_yacd/icons' && pathname !== '/_yacd/libraries') {
+    return send(response, 404, { error: 'Not found' });
+  }
 
   try {
+    if (pathname === '/_yacd/libraries') {
+      if (request.method === 'GET') {
+        return send(response, 200, { libraries: readData().libraries || [] });
+      }
+      if (!['POST', 'DELETE'].includes(request.method)) {
+        return send(response, 405, { error: 'Method not allowed' });
+      }
+      if (!request.headers['content-type']?.startsWith('application/json')) {
+        return send(response, 415, { error: 'JSON required' });
+      }
+      const body = await readBody(request);
+      const data = readData();
+      const libraries = data.libraries || [];
+      if (request.method === 'POST') {
+        if (!validLibrary(body)) return send(response, 400, { error: 'Invalid library' });
+        const existing = libraries.findIndex((item) => item.source === body.source);
+        if (existing < 0 && libraries.length >= 20) {
+          return send(response, 400, { error: 'Library limit reached' });
+        }
+        const entry = {
+          id: existing >= 0 ? libraries[existing].id : crypto.randomUUID(),
+          name: body.name,
+          source: body.source,
+          kind: body.kind,
+          icons: body.icons,
+        };
+        if (existing >= 0) libraries[existing] = entry;
+        else libraries.push(entry);
+      } else {
+        if (typeof body?.id !== 'string')
+          return send(response, 400, { error: 'Invalid library ID' });
+        const index = libraries.findIndex((item) => item.id === body.id);
+        if (index >= 0) libraries.splice(index, 1);
+      }
+      data.libraries = libraries;
+      writeData(data);
+      return send(response, 200, { libraries });
+    }
+
     const current = profile();
     if (!current) return send(response, 404, { error: 'Shared icon storage not configured' });
     if (request.method === 'GET') {

@@ -41,8 +41,10 @@ const ICON_ENDPOINT = '/_yacd/icons';
 
 export async function fetchServerIcons(): Promise<ServerIconSet | null> {
   const response = await fetch(ICON_ENDPOINT, { cache: 'no-store' });
-  if ([401, 403, 404, 405].includes(response.status) ||
-      !response.headers.get('content-type')?.includes('application/json')) {
+  if (
+    [401, 403, 404, 405].includes(response.status) ||
+    !response.headers.get('content-type')?.includes('application/json')
+  ) {
     return null;
   }
   if (!response.ok) throw new Error(`Icon storage returned ${response.status}`);
@@ -59,7 +61,10 @@ export async function importBrowserIcons(icons: Record<string, string>): Promise
   return (await response.json()) as ServerIconSet;
 }
 
-export async function saveServerIcon(group: string, url: string | undefined): Promise<ServerIconSet> {
+export async function saveServerIcon(
+  group: string,
+  url: string | undefined,
+): Promise<ServerIconSet> {
   const response = await fetch(ICON_ENDPOINT, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },

@@ -68,6 +68,16 @@ test('icons persist by configuration path and an empty profile does not reimport
     assert.deepEqual(state.icons, {});
     state = await change(instance.url, 'POST', { icons: { Global: 'https://example.com/old.png' } });
     assert.deepEqual(state.icons, {});
+    const librariesURL = instance.url.replace('/icons', '/libraries');
+    const library = {
+      name: 'Example icons',
+      source: 'https://example.com/icons.json',
+      kind: 'json',
+      icons: [{ name: 'Example', category: 'Test', url: 'https://example.com/icon.png' }],
+    };
+    let libraryState = await change(librariesURL, 'POST', library);
+    assert.equal(libraryState.libraries.length, 1);
+    const libraryId = libraryState.libraries[0].id;
     instance.child.kill();
 
     instance = await start(secondConfig, dataFile);
@@ -76,6 +86,10 @@ test('icons persist by configuration path and an empty profile does not reimport
     assert.deepEqual(state.icons, {});
     state = await change(instance.url, 'PATCH', { group: 'Global', url: 'https://example.com/b.png' });
     assert.equal(state.icons.Global, 'https://example.com/b.png');
+    libraryState = await (await fetch(instance.url.replace('/icons', '/libraries'))).json();
+    assert.equal(libraryState.libraries[0].id, libraryId);
+    libraryState = await change(instance.url.replace('/icons', '/libraries'), 'DELETE', { id: libraryId });
+    assert.deepEqual(libraryState.libraries, []);
     instance.child.kill();
 
     instance = await start(firstConfig, dataFile);
