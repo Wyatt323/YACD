@@ -22,7 +22,6 @@
   color: var(--color-text-secondary);
 }
 
-.select,
 .editRow input {
   min-width: 0;
   height: 36px;
@@ -33,8 +32,87 @@
   color: var(--color-text);
 }
 
-.select {
+.selector {
+  position: relative;
   width: clamp(150px, 20vw, 260px);
+  min-width: 0;
+}
+
+.manager .selectTrigger {
+  width: 100%;
+  padding: 0 11px;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--color-card-border);
+  background: var(--color-input-bg);
+  color: var(--color-text);
+  text-align: left;
+
+  &:hover:not(:disabled),
+  &[aria-expanded='true'] {
+    border-color: var(--color-focus-blue);
+  }
+}
+
+.selectedName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  min-width: 180px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 5px;
+  border: 1px solid var(--color-card-border);
+  border-radius: 10px;
+  background: var(--color-card);
+  box-shadow: var(--shadow-popover);
+}
+
+.manager .option,
+.manager .optionSelected {
+  width: 100%;
+  height: auto;
+  min-height: 36px;
+  padding: 7px 9px;
+  justify-content: space-between;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-hover-soft);
+  }
+}
+
+.manager .optionSelected {
+  background: var(--color-accent-soft-bg);
+  color: var(--color-accent-soft-fg);
+  font-weight: 600;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-accent-soft-bg);
+  }
 }
 
 .actions {
@@ -128,7 +206,7 @@
     flex-wrap: wrap;
   }
 
-  .select {
+  .selector {
     flex: 1 1 160px;
     width: auto;
   }

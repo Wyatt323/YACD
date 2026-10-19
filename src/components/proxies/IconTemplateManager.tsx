@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Edit3, Trash2, X } from '~/components/shared/FeatherIcons';
+import { CheckCircle, ChevronDown, Edit3, Trash2, X } from '~/components/shared/FeatherIcons';
 import type { IconTemplateState } from '~/modules/proxies/iconTemplates';
 
 import s from './IconTemplateManager.module.scss';
@@ -20,12 +20,42 @@ export function IconTemplateManager({ state, onCreate, onSelect, onRename, onDel
   const [name, setName] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [menuOpen, setMenuOpen] = React.useState(false);
   const active = state.templates.find((item) => item.id === state.activeId);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const selectorRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
     if (mode) inputRef.current?.focus();
   }, [mode]);
+
+  React.useEffect(() => {
+    if (!menuOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!selectorRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    return () => document.removeEventListener('pointerdown', closeOnOutsideClick);
+  }, [menuOpen]);
+
+  const focusOption = (index: number) => {
+    const options = selectorRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]');
+    if (options?.length) options[(index + options.length) % options.length].focus();
+  };
+
+  const openMenu = () => {
+    if (busy) return;
+    setMenuOpen(true);
+    window.requestAnimationFrame(() => {
+      focusOption(
+        Math.max(
+          0,
+          state.templates.findIndex((item) => item.id === state.activeId),
+        ),
+      );
+    });
+  };
 
   const run = async (action: () => Promise<void>) => {
     if (busy) return;
@@ -41,7 +71,16 @@ export function IconTemplateManager({ state, onCreate, onSelect, onRename, onDel
     }
   };
 
+  const selectTemplate = (id: string) => {
+    setMenuOpen(false);
+    triggerRef.current?.focus();
+    if (id === state.activeId) return;
+    setMode(null);
+    void run(() => onSelect(id));
+  };
+
   const open = (nextMode: 'create' | 'rename') => {
+    setMenuOpen(false);
     setMode(nextMode);
     setName(nextMode === 'rename' ? active?.name || '' : '');
     setError('');
@@ -50,25 +89,72 @@ export function IconTemplateManager({ state, onCreate, onSelect, onRename, onDel
   return (
     <section className={s.manager} aria-label={t('icon_templates')}>
       <div className={s.toolbar}>
-        <label className={s.label} htmlFor="yacd-icon-template">
-          {t('icon_templates')}
-        </label>
-        <select
-          id="yacd-icon-template"
-          className={s.select}
-          value={state.activeId}
-          onChange={(event) => {
-            setMode(null);
-            void run(() => onSelect(event.target.value));
-          }}
-          disabled={busy}
-        >
-          {state.templates.map((item) => (
-            <option key={item.id} value={item.id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
+        <span className={s.label}>{t('icon_templates')}</span>
+        <div className={s.selector} ref={selectorRef}>
+          <button
+            ref={triggerRef}
+            type="button"
+            className={s.selectTrigger}
+            aria-label={`${t('icon_templates')}: ${active?.name || ''}`}
+            aria-haspopup="listbox"
+            aria-expanded={menuOpen}
+            aria-controls="yacd-icon-template-options"
+            disabled={busy}
+            onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
+            onKeyDown={(event) => {
+              if (!menuOpen && ['ArrowDown', 'ArrowUp'].includes(event.key)) {
+                event.preventDefault();
+                openMenu();
+              }
+            }}
+          >
+            <span className={s.selectedName}>{active?.name}</span>
+            <ChevronDown size={16} className={menuOpen ? s.chevronOpen : undefined} aria-hidden />
+          </button>
+          {menuOpen ? (
+            <div
+              id="yacd-icon-template-options"
+              className={s.menu}
+              role="listbox"
+              tabIndex={-1}
+              aria-label={t('icon_templates')}
+              onKeyDown={(event) => {
+                const options = [
+                  ...(selectorRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]') ||
+                    []),
+                ];
+                const currentIndex = options.indexOf(document.activeElement as HTMLButtonElement);
+                if (event.key === 'Escape') {
+                  event.preventDefault();
+                  setMenuOpen(false);
+                  triggerRef.current?.focus();
+                } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                  event.preventDefault();
+                  focusOption(currentIndex + (event.key === 'ArrowDown' ? 1 : -1));
+                } else if (event.key === 'Home' || event.key === 'End') {
+                  event.preventDefault();
+                  focusOption(event.key === 'Home' ? 0 : options.length - 1);
+                } else if (event.key === 'Tab') {
+                  setMenuOpen(false);
+                }
+              }}
+            >
+              {state.templates.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={item.id === state.activeId ? s.optionSelected : s.option}
+                  role="option"
+                  aria-selected={item.id === state.activeId}
+                  onClick={() => selectTemplate(item.id)}
+                >
+                  <span>{item.name}</span>
+                  {item.id === state.activeId ? <CheckCircle size={15} aria-hidden /> : null}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <div className={s.actions}>
           <button
             type="button"
