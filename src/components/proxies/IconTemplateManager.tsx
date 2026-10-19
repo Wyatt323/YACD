@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Edit3, Trash2, X } from '~/components/shared/FeatherIcons';
 import type { IconTemplateState } from '~/modules/proxies/iconTemplates';
 
 import s from './IconTemplateManager.module.scss';
@@ -15,12 +16,16 @@ type Props = {
 
 export function IconTemplateManager({ state, onCreate, onSelect, onRename, onDelete }: Props) {
   const { t } = useTranslation();
+  const [mode, setMode] = React.useState<'create' | 'rename' | null>(null);
   const [name, setName] = React.useState('');
-  const [rename, setRename] = React.useState(false);
-  const [renameName, setRenameName] = React.useState('');
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState('');
   const active = state.templates.find((item) => item.id === state.activeId);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (mode) inputRef.current?.focus();
+  }, [mode]);
 
   const run = async (action: () => Promise<void>) => {
     if (busy) return;
@@ -36,62 +41,116 @@ export function IconTemplateManager({ state, onCreate, onSelect, onRename, onDel
     }
   };
 
+  const open = (nextMode: 'create' | 'rename') => {
+    setMode(nextMode);
+    setName(nextMode === 'rename' ? active?.name || '' : '');
+    setError('');
+  };
+
   return (
     <section className={s.manager} aria-label={t('icon_templates')}>
-      <label className={s.label} htmlFor="yacd-icon-template">{t('icon_templates')}</label>
-      <select
-        id="yacd-icon-template"
-        value={state.activeId}
-        onChange={(event) => void run(() => onSelect(event.target.value))}
-        disabled={busy}
-      >
-        {state.templates.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-      </select>
-      <form onSubmit={(event) => {
-        event.preventDefault();
-        if (!name.trim()) return;
-        void run(async () => { await onCreate(name.trim()); setName(''); });
-      }}>
-        <input
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          placeholder={t('icon_template_name')}
-          aria-label={t('icon_template_name')}
-          maxLength={80}
-        />
-        <button type="submit" disabled={busy || !name.trim()}>{t('icon_template_create')}</button>
-      </form>
-      {rename ? (
-        <form onSubmit={(event) => {
-          event.preventDefault();
-          if (!active || !renameName.trim()) return;
-          void run(async () => { await onRename(active.id, renameName.trim()); setRename(false); });
-        }}>
-          <input
-            value={renameName}
-            onChange={(event) => setRenameName(event.target.value)}
+      <div className={s.toolbar}>
+        <label className={s.label} htmlFor="yacd-icon-template">
+          {t('icon_templates')}
+        </label>
+        <select
+          id="yacd-icon-template"
+          className={s.select}
+          value={state.activeId}
+          onChange={(event) => {
+            setMode(null);
+            void run(() => onSelect(event.target.value));
+          }}
+          disabled={busy}
+        >
+          {state.templates.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+        <div className={s.actions}>
+          <button
+            type="button"
+            className={s.createButton}
+            disabled={busy}
+            onClick={() => open('create')}
+          >
+            {t('icon_template_create')}
+          </button>
+          <span className={s.divider} aria-hidden />
+          <button
+            type="button"
+            className={s.iconButton}
+            disabled={busy || !active}
+            onClick={() => open('rename')}
+            title={t('icon_template_rename')}
             aria-label={t('icon_template_rename')}
+          >
+            <Edit3 size={15} aria-hidden />
+          </button>
+          <button
+            type="button"
+            className={s.iconButton}
+            disabled={busy || state.templates.length <= 1 || !active}
+            onClick={() => {
+              if (
+                active &&
+                window.confirm(t('icon_template_delete_confirm', { name: active.name }))
+              ) {
+                void run(() => onDelete(active.id));
+              }
+            }}
+            title={t('icon_template_delete')}
+            aria-label={t('icon_template_delete')}
+          >
+            <Trash2 size={15} aria-hidden />
+          </button>
+        </div>
+      </div>
+      {mode ? (
+        <form
+          className={s.editRow}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const value = name.trim();
+            if (!value || (mode === 'rename' && !active)) return;
+            void run(async () => {
+              if (mode === 'create') await onCreate(value);
+              else if (active) await onRename(active.id, value);
+              setMode(null);
+              setName('');
+            });
+          }}
+        >
+          <input
+            ref={inputRef}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder={mode === 'create' ? t('icon_template_name') : t('icon_template_rename')}
+            aria-label={mode === 'create' ? t('icon_template_name') : t('icon_template_rename')}
             maxLength={80}
           />
-          <button type="submit" disabled={busy || !renameName.trim()}>{t('icon_template_save')}</button>
-          <button type="button" onClick={() => setRename(false)}>{t('icon_template_cancel')}</button>
+          <button type="submit" className={s.saveButton} disabled={busy || !name.trim()}>
+            {mode === 'create' ? t('icon_template_create') : t('icon_template_save')}
+          </button>
+          <button
+            type="button"
+            className={s.cancelButton}
+            disabled={busy}
+            onClick={() => setMode(null)}
+            title={t('icon_template_cancel')}
+            aria-label={t('icon_template_cancel')}
+          >
+            <X size={16} aria-hidden />
+          </button>
         </form>
-      ) : (
-        <button type="button" disabled={busy || !active} onClick={() => {
-          setRenameName(active?.name || '');
-          setRename(true);
-        }}>{t('icon_template_rename')}</button>
-      )}
-      <button
-        type="button"
-        disabled={busy || state.templates.length <= 1 || !active}
-        onClick={() => {
-          if (active && window.confirm(t('icon_template_delete_confirm', { name: active.name }))) {
-            void run(() => onDelete(active.id));
-          }
-        }}
-      >{t('icon_template_delete')}</button>
-      {error ? <p className={s.error} role="alert">{error}</p> : null}
+      ) : null}
+      {error ? (
+        <p className={s.error} role="alert">
+          {error}
+        </p>
+      ) : null}
     </section>
   );
 }
