@@ -48,13 +48,21 @@
   min-width: 0;
 }
 
+.topRow {
+  align-items: flex-start;
+}
+
+.bottomRow {
+  margin-top: auto;
+}
+
 .proxyName {
   font-size: 0.82rem;
   font-weight: 500;
+  line-height: 1.35;
   color: var(--color-text-highlight);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
   min-width: 0;
 }
 
