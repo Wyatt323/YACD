@@ -48,10 +48,6 @@
   min-width: 0;
 }
 
-.topRow {
-  align-items: center;
-}
-
 .bottomRow {
   margin-top: auto;
 }
@@ -65,21 +61,15 @@
   min-width: 0;
 }
 
-.proxyMeta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
 .udpBadge {
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: 0.5rem;
+  font-size: 0.6rem;
   font-weight: 500;
   line-height: 1;
-  padding: 2px 4px;
-  border-radius: 4px;
+  letter-spacing: 0.02em;
+  padding: 3px 5px;
+  border-radius: 5px;
   background: var(--color-badge-bg);
   color: var(--color-badge-fg);
 }

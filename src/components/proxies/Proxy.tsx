@@ -211,15 +211,13 @@ export const Proxy = memo(function Proxy({
         <span className={s0.proxyName} title={name}>
           {name}
         </span>
+        {udpLabel ? <span className={s0.udpBadge}>{udpLabel}</span> : null}
       </div>
 
       <div className={s0.bottomRow}>
-        <span className={s0.proxyMeta}>
-          <span className={s0.proxyType}>
-            {formatProxyType(proxy.type)}
-            {proxy.tfo ? <TfoIcon /> : null}
-          </span>
-          {udpLabel ? <span className={s0.udpBadge}>{udpLabel}</span> : null}
+        <span className={s0.proxyType}>
+          {formatProxyType(proxy.type)}
+          {proxy.tfo ? <TfoIcon /> : null}
         </span>
 
         <ProxyLatency

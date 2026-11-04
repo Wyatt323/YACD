@@ -20,7 +20,15 @@ type ProxyListProps = {
   show?: boolean;
 };
 
-function AdaptiveDetail({ names, children }: { names: string[]; children: React.ReactNode }) {
+function AdaptiveDetail({
+  names,
+  proxies,
+  children,
+}: {
+  names: string[];
+  proxies: ProxiesMapping;
+  children: React.ReactNode;
+}) {
   const [cardWidth, setCardWidth] = React.useState(180);
 
   React.useLayoutEffect(() => {
@@ -30,11 +38,18 @@ function AdaptiveDetail({ names, children }: { names: string[]; children: React.
       if (!context) return;
       const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
       context.font = `500 ${0.82 * rootSize}px ${getComputedStyle(document.body).fontFamily}`;
-      const longest = names.reduce(
-        (width, name) => Math.max(width, context.measureText(name).width),
-        0,
-      );
-      if (active) setCardWidth(Math.ceil(Math.max(180, longest + 36)));
+      const nameWidths = names.map((name) => context.measureText(name).width);
+      const monoFont = getComputedStyle(document.documentElement).getPropertyValue('--font-mono');
+      context.font = `500 ${0.6 * rootSize}px ${monoFont || 'monospace'}`;
+      const cardWidths = names.map((name, index) => {
+        const proxy = proxies[name];
+        const badge = proxy?.udp ? (proxy.xudp ? 'XUDP' : 'UDP') : '';
+        const badgeWidth = badge ? context.measureText(badge).width + 10 + 8 : 0;
+        return nameWidths[index] + badgeWidth + 28;
+      });
+      if (active) {
+        setCardWidth(Math.ceil(cardWidths.reduce((width, card) => Math.max(width, card), 180)));
+      }
     };
 
     measure();
@@ -42,7 +57,7 @@ function AdaptiveDetail({ names, children }: { names: string[]; children: React.
     return () => {
       active = false;
     };
-  }, [names]);
+  }, [names, proxies]);
 
   return (
     <div
@@ -67,7 +82,7 @@ export function ProxyList({
   const proxyNames = all;
 
   return (
-    <AdaptiveDetail names={proxyNames}>
+    <AdaptiveDetail names={proxyNames} proxies={proxies}>
       {proxyNames.map((proxyName) => {
         const proxy = proxies[proxyName] || {
           name: proxyName,
@@ -162,7 +177,7 @@ export function ProxyListGroupedByProvider({
               <span className={s.providerQty}>{t('node_qty', { n: names.length })}</span>
             </div>
           ) : null}
-          <AdaptiveDetail names={names}>
+          <AdaptiveDetail names={names} proxies={proxies}>
             {names.map((proxyName) => {
               const proxy = proxies[proxyName] || {
                 name: proxyName,
