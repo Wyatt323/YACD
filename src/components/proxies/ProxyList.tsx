@@ -20,6 +20,40 @@ type ProxyListProps = {
   show?: boolean;
 };
 
+function AdaptiveDetail({ names, children }: { names: string[]; children: React.ReactNode }) {
+  const [cardWidth, setCardWidth] = React.useState(180);
+
+  React.useLayoutEffect(() => {
+    let active = true;
+    const measure = () => {
+      const context = document.createElement('canvas').getContext('2d');
+      if (!context) return;
+      const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      context.font = `500 ${0.82 * rootSize}px ${getComputedStyle(document.body).fontFamily}`;
+      const longest = names.reduce(
+        (width, name) => Math.max(width, context.measureText(name).width),
+        0,
+      );
+      if (active) setCardWidth(Math.ceil(Math.max(180, longest + 36)));
+    };
+
+    measure();
+    void document.fonts?.ready.then(measure);
+    return () => {
+      active = false;
+    };
+  }, [names]);
+
+  return (
+    <div
+      className={cx(s.list, s.detail)}
+      style={{ '--proxy-card-min-width': `${cardWidth}px` } as React.CSSProperties}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function ProxyList({
   all,
   proxies,
@@ -33,7 +67,7 @@ export function ProxyList({
   const proxyNames = all;
 
   return (
-    <div className={cx(s.list, s.detail)}>
+    <AdaptiveDetail names={proxyNames}>
       {proxyNames.map((proxyName) => {
         const proxy = proxies[proxyName] || {
           name: proxyName,
@@ -56,7 +90,7 @@ export function ProxyList({
           />
         );
       })}
-    </div>
+    </AdaptiveDetail>
   );
 }
 
@@ -128,7 +162,7 @@ export function ProxyListGroupedByProvider({
               <span className={s.providerQty}>{t('node_qty', { n: names.length })}</span>
             </div>
           ) : null}
-          <div className={cx(s.list, s.detail)}>
+          <AdaptiveDetail names={names}>
             {names.map((proxyName) => {
               const proxy = proxies[proxyName] || {
                 name: proxyName,
@@ -151,7 +185,7 @@ export function ProxyListGroupedByProvider({
                 />
               );
             })}
-          </div>
+          </AdaptiveDetail>
         </div>
       ))}
     </div>
