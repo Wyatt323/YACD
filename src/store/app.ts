@@ -1,4 +1,11 @@
-import { DispatchFn, GetStateFn, State, StateApp } from '~/store/types';
+import {
+  DispatchFn,
+  GetStateFn,
+  State,
+  StateApp,
+  TabTitleConfig,
+  TITLE_SEGMENT_KINDS,
+} from '~/store/types';
 import type { ClashAPIConfig } from '~/types';
 
 import { DEFAULT_LATENCY_TEST_URL, PROVIDER_HEALTHCHECK_TIMEOUT } from '../misc/constants';
@@ -25,6 +32,7 @@ export const getAutoCloseOldConns = (s: State) => s.app.autoCloseOldConns;
 export const getLogStreamingPaused = (s: State) => s.app.logStreamingPaused;
 export const getProxiesLayout = (s: State) => s.app.proxiesLayout;
 export const getProxyGroupByProvider = (s: State) => s.app.proxyGroupByProvider;
+export const getTabTitle = (s: State) => s.app.tabTitle;
 
 const saveStateDebounced = debounce(saveState, 600);
 
@@ -67,7 +75,10 @@ export function removeClashAPIConfig({ baseURL, secret }: ClashAPIConfig) {
   };
 }
 
-export function selectClashAPIConfig({ baseURL, secret }: ClashAPIConfig) {
+/**
+ * 选中一条后端并整页 reload。nextHash 给出时 reload 落到这个路由，不给就留在当前路由。
+ */
+export function selectClashAPIConfig({ baseURL, secret }: ClashAPIConfig, nextHash?: string) {
   return async (dispatch: DispatchFn, getState: GetStateFn) => {
     const idx = findClashAPIConfigIndex(getState, { baseURL, secret });
     if (idx === undefined) return;
@@ -83,6 +94,8 @@ export function selectClashAPIConfig({ baseURL, secret }: ClashAPIConfig) {
     // manual clean up is too complex
     // we just reload the app
     try {
+      // replaceState 不触发 popstate，路由不会在 reload 前先渲染一次目标页
+      if (nextHash) window.history.replaceState(null, '', nextHash);
       window.location.reload();
     } catch (err) {
       // ignore
@@ -235,7 +248,35 @@ const defaultState: StateApp = {
   logStreamingPaused: false,
   proxiesLayout: 'double',
   proxyGroupByProvider: false,
+  tabTitle: {
+    enabled: true,
+    segments: [
+      { id: 'upload', kind: 'upload' },
+      { id: 'download', kind: 'download' },
+      { id: 'text:default', kind: 'text', text: '·' },
+      { id: 'appTitle', kind: 'appTitle' },
+    ],
+    separator: ' ',
+    refreshSeconds: 2,
+  },
 };
+
+/** 持久化的值来自 localStorage，可能是旧版本写的或被手改过，形状不对就整个回落到默认值 */
+function isTabTitleConfig(x: unknown): x is TabTitleConfig {
+  if (typeof x !== 'object' || x === null) return false;
+  const c = x as Partial<TabTitleConfig>;
+  if (typeof c.enabled !== 'boolean' || typeof c.separator !== 'string') return false;
+  if (typeof c.refreshSeconds !== 'number' || !(c.refreshSeconds > 0)) return false;
+  if (!Array.isArray(c.segments)) return false;
+  const ids = new Set<string>();
+  for (const seg of c.segments) {
+    if (typeof seg?.id !== 'string' || ids.has(seg.id)) return false;
+    if (!(TITLE_SEGMENT_KINDS as readonly string[]).includes(seg.kind)) return false;
+    if (seg.kind === 'text' ? typeof seg.text !== 'string' : seg.id !== seg.kind) return false;
+    ids.add(seg.id);
+  }
+  return true;
+}
 
 function parseConfigQueryString() {
   const { search } = window.location;
@@ -318,6 +359,7 @@ function applyBackendQueryString(s: StateApp, query: Record<string, string>, isF
 export function initialState() {
   const persisted = loadState();
   const s: StateApp = { ...defaultState, ...persisted };
+  if (!isTabTitleConfig(s.tabTitle)) s.tabTitle = defaultState.tabTitle;
   const query = parseConfigQueryString();
 
   if (backendQueryKeys.some((key) => query[key])) {

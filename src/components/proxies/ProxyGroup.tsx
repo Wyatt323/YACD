@@ -107,10 +107,7 @@ export const ProxyGroup = memo(function ProxyGroup({
 
   const version = useVersion(apiConfig);
 
-  const isSelectable = useMemo(
-    () => ['Selector', version.meta && 'Fallback', version.meta && 'URLTest'].includes(type),
-    [type, version.meta],
-  );
+  const isSelectable = ['Selector', 'Fallback', 'URLTest'].includes(type);
 
   const {
     app: { updateCollapsibleIsOpen },
@@ -128,7 +125,7 @@ export const ProxyGroup = memo(function ProxyGroup({
     appConfig.autoCloseOldConns,
   );
   const canResumeAutomaticSelection =
-    version.meta && !version.premium && Boolean(fixed) && ['URLTest', 'Fallback'].includes(type);
+    version.core === 'mihomo' && Boolean(fixed) && ['URLTest', 'Fallback'].includes(type);
   const itemOnTapCallback = useCallback(
     (proxyName: string) => {
       if (!isSelectable || isResuming) return;
@@ -139,10 +136,7 @@ export const ProxyGroup = memo(function ProxyGroup({
 
   const [testGroup, isTestingLatency] = useTestGroupLatency(apiConfig, appConfig);
   const isResumeBlocked = isResuming || isTestingLatency;
-  const testLatency = useCallback(
-    () => testGroup({ groupName: name, isMeta: version.meta === true, memberNames: all }),
-    [testGroup, name, version.meta, all],
-  );
+  const testLatency = useCallback(() => testGroup(name), [testGroup, name]);
 
   const onTestLatency = useTestProxyLatency(apiConfig, appConfig);
 
