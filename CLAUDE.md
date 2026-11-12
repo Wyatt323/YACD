@@ -16,12 +16,13 @@ bun start        # dev server at http://127.0.0.1:3000 (alias: bun dev)
 bun run build    # production build, output goes to ./public (not ./dist, see vite.config.mts)
 bun serve        # preview a production build
 bun lint         # oxlint src (bun lint:fix to autofix)
-bun format       # prettier --write (bun format:check to verify)
+bun format       # oxfmt src (bun format:check to verify)
 bun typecheck    # tsc --noEmit
 ```
 
 Use `bun run build` rather than `bun build` — the latter is Bun's own bundler command, not the
-`build` script.
+`build` script. Likewise `bun fmt` is Bun's own formatter, not the `format` script; this repo
+formats with oxfmt only.
 
 There is no test suite in this repo (no test runner configured, no `*.test.*` files) — do not add
 a `test` script or assume one exists. `bun test` would run Bun's built-in test runner, which this
@@ -39,21 +40,23 @@ every published version — including canary — still declares `peerDependencie
 `typescript-eslint` again will fail at startup with `Cannot read properties of undefined (reading
 'Cjs')`.
 
-`.oxlintrc.json` mirrors the old `eslint.config.mjs` rule-for-rule. Two deltas worth knowing:
+`.oxlintrc.json` turns the `correctness` category off and lists each rule explicitly, keeping only
+rules that catch bugs `tsc` (strict) misses. Add a rule there by name rather than re-enabling a
+category: oxlint upgrades add rules to categories, and 1.93 put the React Compiler rules
+(`react/immutability`, `react/refs`, …) into `correctness`. Those rules misfire on this codebase
+(e.g. `ref.current` writes inside callbacks), and the project doesn't use React Compiler.
+jsx-a11y is limited to ARIA/markup validity; the keyboard-interaction rules are not enabled.
+Type-aware rules (`no-floating-promises`, …) only run with `oxlint-tsgolint` installed and
+`--type-aware`, neither of which this repo has. New suppressions should use the `oxlint-` prefix.
 
-- oxlint has no `import/order`. Import grouping/ordering moved into Prettier via
-  `@ianvs/prettier-plugin-sort-imports` (`importOrder` in `.prettierrc`) — it is a *formatting*
-  concern now, fixed by `bun format`, not reported by `bun lint`.
-- oxlint enables `jsx-a11y/prefer-tag-over-role` and `jsx-a11y/control-has-associated-label` by
-  default; both were off/absent in eslint-plugin-jsx-a11y's `recommended`, so `.oxlintrc.json`
-  turns them off to keep parity. oxlint is also stricter than ESLint about `role={cond ? … : …}`
-  expressions under `no-static-element-interactions`; those sites carry
-  `// oxlint-disable-next-line`. oxlint honours `eslint-disable*` comments too, but new
-  suppressions should use the `oxlint-` prefix.
+oxlint has no `import/order`. Import grouping/ordering is a *formatting* concern, done by oxfmt's
+`sortImports` in `.oxfmtrc.json`, fixed by `bun format`, not reported by `bun lint`. The groups
+there are all custom groups on purpose: oxfmt's predefined selectors would pull `../X.module.scss`
+into a separate `style` group and side-effect imports like `import '~/styles/main.scss'` into
+`alias`, both of which reorder existing files.
 
-Dependency pins that used to live in `pnpm-workspace.yaml` now live in `package.json`:
-`overrides` (replaces pnpm `overrides`) and `trustedDependencies` (replaces pnpm `allowBuilds` —
-only listed packages may run install scripts, so `core-js` and `@parcel/watcher` stay blocked).
+`trustedDependencies` in `package.json` replaces pnpm's `allowBuilds`: only listed packages may run
+install scripts, so `@parcel/watcher` stays blocked.
 
 ## Architecture
 

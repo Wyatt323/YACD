@@ -86,7 +86,7 @@ export default function Connections({ apiConfig }: Props) {
     useConnectionColumns();
 
   const { conns, closedConns, total, isRefreshPaused, toggleIsRefreshPaused, closeAllConnections } =
-    useConnectionsStream(apiConfig, sourceMap);
+    useConnectionsStream(apiConfig);
 
   const {
     filterKeyword,
