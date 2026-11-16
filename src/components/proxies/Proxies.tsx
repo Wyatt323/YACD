@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { GroupIconPicker } from '~/components/proxies/GroupIconPicker';
 import { IconTemplateManager } from '~/components/proxies/IconTemplateManager';
 import { ProxiesHeader } from '~/components/proxies/ProxiesHeader';
+import { ProxiesSkeleton } from '~/components/proxies/ProxiesSkeleton';
 import { ProxyGroup } from '~/components/proxies/ProxyGroup';
 import { ProxyProvider } from '~/components/proxies/ProxyProvider';
 import {
@@ -18,14 +19,6 @@ import {
   ServerIconSet,
 } from '~/modules/proxies/groupIcons';
 import {
-  createIconTemplate,
-  deleteIconTemplate,
-  fetchIconTemplates,
-  IconTemplateState,
-  renameIconTemplate,
-  selectIconTemplate,
-} from '~/modules/proxies/iconTemplates';
-import {
   useCollapseAll,
   useDelayMapping,
   useProxiesPage,
@@ -35,6 +28,14 @@ import {
   useVisibleGroupNames,
   useVisibleProviders,
 } from '~/modules/proxies/hooks';
+import {
+  createIconTemplate,
+  deleteIconTemplate,
+  fetchIconTemplates,
+  IconTemplateState,
+  renameIconTemplate,
+  selectIconTemplate,
+} from '~/modules/proxies/iconTemplates';
 import { ProxiesAppConfig } from '~/modules/proxies/utils';
 import { ClashAPIConfig } from '~/types';
 
@@ -46,7 +47,15 @@ type Props = {
   appConfig: ProxiesAppConfig;
 };
 
-export default function Proxies({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
+export default function Proxies(props: Props) {
+  return (
+    <React.Suspense fallback={<ProxiesSkeleton proxiesLayout={props.appConfig.proxiesLayout} />}>
+      <ProxiesContent {...props} />
+    </React.Suspense>
+  );
+}
+
+function ProxiesContent({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
   const { t } = useTranslation();
   const [iconAssignments, setIconAssignments] = React.useState(readGroupIconAssignments);
   const [serverIconSet, setServerIconSet] = React.useState<ServerIconSet | null>(null);
