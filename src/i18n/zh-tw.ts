@@ -29,6 +29,12 @@ export const data = {
   Down: '下載',
   'Test Latency': '測試延遲速度',
   settings: '設定',
+  proxy_chains: '代理鏈',
+  chain_setup:
+    '請在 Mihomo 設定中加入「应用代理链」「代理链入口」「代理链出口」三個可見群組，並讓出口節點的 dialer-proxy 指向入口群組。',
+  chain_usage: '先選入口和出口，再到「应用代理链」選取出口群組。只有指向此群組的流量會使用它。',
+  chain_no_match: '沒有符合的代理鏈群組或節點。',
+  chain_example: '下載 Mihomo 設定範例',
   proxy_groups: '代理群組',
   providers: '提供者',
   search_proxies_placeholder: '搜尋代理群組或節點',

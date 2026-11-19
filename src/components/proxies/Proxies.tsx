@@ -8,6 +8,7 @@ import { ProxiesHeader } from '~/components/proxies/ProxiesHeader';
 import { ProxiesSkeleton } from '~/components/proxies/ProxiesSkeleton';
 import { ProxyGroup } from '~/components/proxies/ProxyGroup';
 import { ProxyProvider } from '~/components/proxies/ProxyProvider';
+import { partitionProxyGroups } from '~/modules/proxies/chainGroups';
 import {
   browserIconsNeedMigration,
   fetchServerIcons,
@@ -174,6 +175,9 @@ function ProxiesContent({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
     activeTab,
     setActiveTab,
     proxyGroups,
+    regular,
+    chains,
+    activeGroups,
     providers,
   } = useProxiesPage({
     groupNames: visibleGroupNames,
@@ -181,6 +185,7 @@ function ProxiesContent({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
     proxiesLayout: appConfig.proxiesLayout,
   });
 
+  const chainConfig = React.useMemo(() => partitionProxyGroups(groupNames), [groupNames]);
   const providerNames = React.useMemo(
     () => proxyProviders.map((item) => item.name),
     [proxyProviders],
@@ -192,8 +197,8 @@ function ProxiesContent({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
 
   // 折叠是视图操作，只作用于搜索后可见的卡片
   const [toggleCollapseAll, allCollapsed] = useCollapseAll({
-    prefix: activeTab === 'proxies' ? 'proxyGroup' : 'proxyProvider',
-    names: activeTab === 'proxies' ? visibleGroupNames : visibleProviderNames,
+    prefix: activeTab === 'providers' ? 'proxyProvider' : 'proxyGroup',
+    names: activeTab === 'providers' ? visibleProviderNames : activeGroups,
     collapsibleIsOpen,
   });
 
@@ -208,7 +213,7 @@ function ProxiesContent({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
   });
 
   const content =
-    activeTab === 'proxies' ? (
+    activeTab !== 'providers' ? (
       <div className={containerClassName}>
         {proxyGroups.map((column, i) => (
           <div key={i} className={s0.column}>
@@ -262,7 +267,8 @@ function ProxiesContent({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
       <ProxiesHeader
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        groupCount={visibleGroupNames.length}
+        groupCount={regular.length}
+        chainCount={chains.length}
         providerCount={proxyProviders.length}
         visibleProviderCount={visibleProviders.length}
         appConfig={appConfig}
@@ -286,6 +292,22 @@ function ProxiesContent({ collapsibleIsOpen, apiConfig, appConfig }: Props) {
         />
       ) : null}
       {iconStorage === 'error' ? <p role="alert">{t('group_icons_server_error')}</p> : null}
+      {activeTab === 'chains' ? (
+        <section className={s0.chainHelp}>
+          <p>
+            {t(
+              !chainConfig.complete
+                ? 'chain_setup'
+                : chains.length === 0
+                  ? 'chain_no_match'
+                  : 'chain_usage',
+            )}
+          </p>
+          <a href="./proxy-chain-example.yaml" download>
+            {t('chain_example')}
+          </a>
+        </section>
+      ) : null}
       {content}
       <GroupIconPicker
         isOpen={editingGroupName !== null}

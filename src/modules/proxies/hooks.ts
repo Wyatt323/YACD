@@ -12,6 +12,7 @@ import { toast } from '~/store/toast';
 import { DelayMapping, FormattedProxyProvider, ProxiesMapping, ProxyItem } from '~/store/types';
 import { ClashAPIConfig } from '~/types';
 
+import { partitionProxyGroups } from './chainGroups';
 import {
   findReselectedGroups,
   formatProxyProviders,
@@ -624,12 +625,14 @@ export function useProxiesPage({
     setIsSettingsOpen((v) => !v);
   }, []);
 
-  const [activeTab, setActiveTab] = useState<'proxies' | 'providers'>('proxies');
+  const [activeTab, setActiveTab] = useState<'proxies' | 'providers' | 'chains'>('proxies');
+  const { regular, chains } = useMemo(() => partitionProxyGroups(groupNames), [groupNames]);
+  const activeGroups = activeTab === 'chains' ? chains : regular;
 
   const proxyGroups = useMemo(() => {
-    const formatted = groupNames.map((name, i) => ({ name, i }));
+    const formatted = activeGroups.map((name, i) => ({ name, i }));
     return splitItemsByLayout(formatted, proxiesLayout);
-  }, [groupNames, proxiesLayout]);
+  }, [activeGroups, proxiesLayout]);
 
   const providers = useMemo(() => {
     const formatted = proxyProviders.map((item, i) => ({ item, i }));
@@ -643,6 +646,9 @@ export function useProxiesPage({
     activeTab,
     setActiveTab,
     proxyGroups,
+    regular,
+    chains,
+    activeGroups,
     providers,
   };
 }
