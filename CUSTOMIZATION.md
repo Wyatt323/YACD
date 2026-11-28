@@ -55,9 +55,3 @@ external-ui-url: https://github.com/Wyatt323/YACD/archive/refs/heads/gh-pages.zi
 ```
 
 Mihomo's `POST /upgrade/ui` endpoint downloads the configured UI package. Updating the GitHub repository alone does not replace a locally installed UI; arrange a trusted local scheduler or use the panel's UI update control to call this endpoint.
-
-## Proxy chains / 代理链
-
-The Proxies page has a dedicated tab for visible Mihomo groups named `应用代理链` (choose ordinary or chained routing), `代理链入口` (first hop), and `代理链出口` (last hop). To list multiple pairs, append a label such as `代理链入口 · 香港` and reference the full names in your configuration. The panel uses the controller's normal selector API; it does not need access to the OpenWrt filesystem.
-
-[Configuration fragment / 配置片段](assets/proxy-chain-example.yaml): merge the fragment into your Mihomo configuration using real node names and settings. Each dedicated exit node must set `dialer-proxy` to its corresponding entry selector. Route the desired rules or business groups to `应用代理链`; leave other routes as they are. For generated subscriptions, apply these changes in your generation or persistent override step so refreshes keep the chain.

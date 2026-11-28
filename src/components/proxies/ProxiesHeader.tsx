@@ -22,14 +22,13 @@ import Settings from './Settings';
 
 type AppConfig = React.ComponentProps<typeof Settings>['appConfig'];
 
-type TabKey = 'proxies' | 'providers' | 'chains';
+type TabKey = 'proxies' | 'providers';
 
 type Props = {
   activeTab: TabKey;
   setActiveTab: (tab: TabKey) => void;
   /** 搜索后可见的代理组数 */
   groupCount: number;
-  chainCount: number;
   /** 提供商总数，决定标签是否出现（搜索时标签不该消失） */
   providerCount: number;
   /** 搜索后可见的提供商数，只影响标签上的计数 */
@@ -50,7 +49,6 @@ export function ProxiesHeader({
   activeTab,
   setActiveTab,
   groupCount,
-  chainCount,
   providerCount,
   visibleProviderCount,
   appConfig,
@@ -85,12 +83,6 @@ export function ProxiesHeader({
             onClick={() => setActiveTab('providers')}
           />
         ) : null}
-        <HeaderTab
-          active={activeTab === 'chains'}
-          label={t('proxy_chains')}
-          count={chainCount}
-          onClick={() => setActiveTab('chains')}
-        />
       </HeaderTabs>
 
       <HeaderSearch className={s.search}>

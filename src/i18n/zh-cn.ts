@@ -33,13 +33,6 @@ export const data = {
   general: '常规',
   management: '管理',
   dashboard: '面板',
-  proxy_chains: '代理链',
-  chain_setup:
-    '在 Mihomo 配置中加入「应用代理链」「代理链入口」「代理链出口」三个可见策略组。每个出口节点用 dialer-proxy 指向入口组。',
-  chain_usage:
-    '先选入口和出口，再到「应用代理链」选择出口组。只有指向「应用代理链」的流量会使用它。',
-  chain_no_match: '没有匹配的代理链分组或节点。',
-  chain_example: '下载 Mihomo 配置示例',
   proxy_groups: '代理组',
   providers: '提供商',
   search_proxies_placeholder: '搜索代理组或节点',

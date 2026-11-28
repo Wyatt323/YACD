@@ -32,13 +32,6 @@ export const data = {
   general: 'General',
   management: 'Management',
   dashboard: 'Dashboard',
-  proxy_chains: 'Proxy chains',
-  chain_setup:
-    'Add the visible groups 应用代理链 (apply), 代理链入口 (entry) and 代理链出口 (exit) to Mihomo. Set dialer-proxy on each exit node to the entry group.',
-  chain_usage:
-    'Choose the entry and exit, then select the exit group under 应用代理链. Only traffic routed to that selector uses this choice.',
-  chain_no_match: 'No chain groups or nodes match your search.',
-  chain_example: 'Download Mihomo configuration example',
   proxy_groups: 'Groups',
   providers: 'Providers',
   search_proxies_placeholder: 'Search groups or nodes',

@@ -54,17 +54,3 @@
     }
   }
 }
-
-.chainHelp {
-  margin: 12px clamp(12px, 3vw, 32px) 0;
-  color: var(--color-text-secondary);
-  font-size: 0.875rem;
-  line-height: 1.5;
-
-  p {
-    margin: 0 0 4px;
-  }
-  a {
-    color: var(--color-text-highlight);
-  }
-}
