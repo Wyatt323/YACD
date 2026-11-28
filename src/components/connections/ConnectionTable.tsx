@@ -9,9 +9,16 @@ import { useMediaQuery } from '~/hooks/useMediaQuery';
 import { getDateFnsLocale } from '~/misc/date-locale';
 import prettyBytes from '~/misc/pretty-bytes';
 import { useElementWidth } from '~/modules/connections/hooks';
-import { ConnectionColumn, formatElapsed, SortState } from '~/modules/connections/utils';
+import {
+  ColumnFilterOption,
+  ColumnFilters,
+  ConnectionColumn,
+  formatElapsed,
+  SortState,
+} from '~/modules/connections/utils';
 import { FormattedConn } from '~/store/connections';
 
+import { ColumnFilterButton, MobileColumnFilter } from './ColumnFilter';
 import ConnectionCard from './ConnectionCard';
 import { ConnectionChainIcon } from './ConnectionChainIcon';
 import ConnectionDetailModal from './ConnectionDetailModal';
@@ -306,6 +313,11 @@ type Props = {
   fullChain: boolean;
   chainIcons: Record<string, string>;
   onCloseConn: (id: string) => void;
+  columnFilters: ColumnFilters;
+  setColumnFilter: (columnId: string, values: string[]) => void;
+  /** columns 里能筛选的那些，窄屏的筛选按钮用 */
+  filterableColumns: ConnectionColumn[];
+  getFilterOptions: (columnId: string) => ColumnFilterOption[];
 };
 
 export default function ConnectionTable({
@@ -319,8 +331,15 @@ export default function ConnectionTable({
   fullChain,
   chainIcons,
   onCloseConn,
+  columnFilters,
+  setColumnFilter,
+  filterableColumns,
+  getFilterOptions,
 }: Props) {
   const { t, i18n } = useTranslation();
+  // 同一时间只开一列的筛选弹层
+  const [openFilterId, setOpenFilterId] = React.useState<string | null>(null);
+  const closeFilter = React.useCallback(() => setOpenFilterId(null), []);
   // 只存 id，每次渲染从实时 data 里取最新对象，弹窗里的流量/时长才能实时更新
   const [detailId, setDetailId] = React.useState<string | null>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -441,6 +460,12 @@ export default function ConnectionTable({
             >
               {sort.dir === 'desc' ? <ArrowDown size={16} /> : <ArrowUp size={16} />}
             </button>
+            <MobileColumnFilter
+              columns={filterableColumns}
+              columnFilters={columnFilters}
+              setColumnFilter={setColumnFilter}
+              getFilterOptions={getFilterOptions}
+            />
           </div>
         ) : (
           <div className={s.headWrap} ref={headRef}>
@@ -466,25 +491,43 @@ export default function ConnectionTable({
                       [s.headCellSortable]: sortable,
                       [s.headCellActive]: active,
                     })}
-                    onClick={sortable ? () => setSort(column.id) : undefined}
-                    onKeyDown={
-                      sortable
-                        ? (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              setSort(column.id);
-                            }
-                          }
-                        : undefined
-                    }
-                    role={sortable ? 'button' : undefined}
-                    tabIndex={sortable ? 0 : undefined}
                   >
-                    <span className={s.headText}>
-                      {column.kind === 'ctrl' ? '' : t(column.labelKey)}
+                    {/* 排序和筛选是两个并列的按钮，不能把漏斗嵌进可点击的列头里 */}
+                    <span
+                      className={s.headSort}
+                      onClick={sortable ? () => setSort(column.id) : undefined}
+                      onKeyDown={
+                        sortable
+                          ? (e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                setSort(column.id);
+                              }
+                            }
+                          : undefined
+                      }
+                      role={sortable ? 'button' : undefined}
+                      tabIndex={sortable ? 0 : undefined}
+                    >
+                      <span className={s.headText}>
+                        {column.kind === 'ctrl' ? '' : t(column.labelKey)}
+                      </span>
+                      {active ? (
+                        <span className={s.headArrow}>{sort.dir === 'desc' ? '↓' : '↑'}</span>
+                      ) : null}
                     </span>
-                    {active ? (
-                      <span className={s.headArrow}>{sort.dir === 'desc' ? '↓' : '↑'}</span>
+                    {column.filterValues ? (
+                      <ColumnFilterButton
+                        column={column}
+                        selected={columnFilters[column.id] ?? []}
+                        isOpen={openFilterId === column.id}
+                        onToggle={() =>
+                          setOpenFilterId((id) => (id === column.id ? null : column.id))
+                        }
+                        onClose={closeFilter}
+                        getFilterOptions={getFilterOptions}
+                        onChange={(values) => setColumnFilter(column.id, values)}
+                      />
                     ) : null}
                   </div>
                 );

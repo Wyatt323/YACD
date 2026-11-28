@@ -95,16 +95,27 @@ export default function Connections({ apiConfig }: Props) {
     closeAllConnections,
   } = useConnectionsStream(apiConfig);
 
+  const isClosedTab = activeTab === 'closed';
+
   const {
     filterKeyword,
     setFilterKeyword,
-    filterSourceIpStr,
-    setFilterSourceIpStr,
+    columnFilters,
+    setColumnFilter,
+    filterableColumns,
+    getFilterOptions,
     filteredConns,
     filteredClosedConns,
-    connIpSet,
     isFiltering,
-  } = useConnectionFilters({ conns, closedConns, sourceMap, settings, t });
+  } = useConnectionFilters({
+    conns,
+    closedConns,
+    isClosedTab,
+    columns: visibleColumns,
+    sourceMap,
+    settings,
+    t,
+  });
 
   const stats = useConnectionStats(conns, total);
 
@@ -121,7 +132,6 @@ export default function Connections({ apiConfig }: Props) {
     });
   }, []);
 
-  const isClosedTab = activeTab === 'closed';
   const rows = isClosedTab ? filteredClosedConns : filteredConns;
   const poolSize = isClosedTab ? closedConns.length : conns.length;
 
@@ -149,9 +159,6 @@ export default function Connections({ apiConfig }: Props) {
         setActiveTab={setActiveTab}
         activeCount={isLoading ? undefined : filteredConns.length}
         closedCount={isLoading ? undefined : filteredClosedConns.length}
-        connIpSet={connIpSet}
-        filterSourceIpStr={filterSourceIpStr}
-        setFilterSourceIpStr={setFilterSourceIpStr}
         filterKeyword={filterKeyword}
         setFilterKeyword={setFilterKeyword}
         isRefreshPaused={isRefreshPaused}
@@ -176,6 +183,10 @@ export default function Connections({ apiConfig }: Props) {
           fullChain={settings.fullChain}
           chainIcons={chainIcons}
           onCloseConn={closeConn}
+          columnFilters={columnFilters}
+          setColumnFilter={setColumnFilter}
+          filterableColumns={filterableColumns}
+          getFilterOptions={getFilterOptions}
         />
       </div>
 
